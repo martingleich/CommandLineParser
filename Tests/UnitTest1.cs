@@ -184,5 +184,14 @@ namespace Tests
 		{
 			Assert.Throws<ArgumentException>(() => CommandLineParser.Parse<DuplicateNameErrorType>(new string[0]));
 		}
+		class UnsupportedTypeErrorType
+		{
+			public KeyValuePair<float, float> UnsupportedType;
+		}
+		[Fact]
+		public void UnsupportedTypeError()
+		{
+			Assert.Throws<ArgumentException>(() => CommandLineParser.Parse<UnsupportedTypeErrorType>(new string[0]));
+		}
 	}
 }
