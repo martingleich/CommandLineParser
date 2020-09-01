@@ -37,6 +37,12 @@ namespace Tests
 			Assert.True(result.Value1);
 			Assert.False(result.Value2);
 		}
+		[Fact]
+		public void BooleanParse_UnknownArgument()
+		{
+			var result = CommandLineParser.ParseWithError<BooleanTestType1>(new[] { "--blub" });
+			Assert.False(result.IsOkay);
+		}
 		public class BooleanTestType_WithDefault
 		{
 			public bool Value1;

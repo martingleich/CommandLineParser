@@ -6,28 +6,6 @@ using System.Reflection;
 
 namespace CmdParse
 {
-	public abstract class ErrorOr<T>
-	{
-		private sealed class Value : ErrorOr<T>
-		{
-			public T _value;
-			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error) => okay(_value);
-		}
-		private sealed class Error : ErrorOr<T>
-		{
-			public string _error;
-			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error) => error(_error);
-		}
-
-		public abstract TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error);
-
-		public static implicit operator ErrorOr<T>(string error) => new Error() { _error = error };
-		public static ErrorOr<T> FromValue(T value) => new Value() { _value = value };
-	}
-	public static class ErrorOr
-	{
-		public static ErrorOr<T> FromValue<T>(T value) => ErrorOr<T>.FromValue(value);
-	}
 
 	public static class CommandLineParser
 	{
@@ -99,7 +77,9 @@ namespace CmdParse
 			Dictionary<Option, bool> values = new Dictionary<Option, bool>();
 			foreach (var arg in args)
 			{
-				var matched = Options.Where(b => b.LongName == arg).First();
+				var matched = Options.Where(b => b.LongName == arg).FirstOrDefault();
+				if (matched == null)
+					return $"Unknown option '{arg}'.";
 				values.Add(matched, !matched.DefaultValue);
 			}
 			foreach (var arg in Options)
