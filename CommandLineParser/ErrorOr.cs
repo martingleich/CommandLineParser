@@ -37,7 +37,7 @@ namespace CmdParse
 		public static ErrorOr<T> FromValue(T value) => new ValueT(value);
 
 		public string? MaybeError => Accept<string?>(_ => null, e => e);
-		public T Value => Accept<T>(x => x, e => throw new InvalidOperationException());
+		public T Value => Accept(x => x, e => throw new InvalidOperationException());
 		public ErrorOr<TResult> Apply<TResult>(Func<T, TResult> func) =>
 			Accept(x => ErrorOr.FromValue(func(x)), e => e);
 	}
