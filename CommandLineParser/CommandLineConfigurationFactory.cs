@@ -67,7 +67,7 @@ namespace CmdParse
 			{
 				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, str => bool.TryParse(str, out var val)
 					? ErrorOr.FromValue<object?>(val)
-					: "Invalid boolean"));
+					: "Invalid boolean");
 			}
 			else if (elemType == typeof(int))
 			{
