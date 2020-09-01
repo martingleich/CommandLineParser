@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 
@@ -36,25 +38,39 @@ namespace CmdParse
 			Arguments = arguments;
 		}
 
+		public enum Arity
+		{
+			OneOrZero,
+			ZeroOrMany,
+		}
 		public abstract class AbstractArgument
 		{
-			protected AbstractArgument(FieldInfo location, object? defaultValue, string name)
+			protected AbstractArgument(FieldInfo location, object? defaultValue, string name, Arity arity, Type resultType)
 			{
 				Location = location;
 				DefaultValue = defaultValue;
 				Name = name;
+				Arity = arity;
+				ResultType = resultType;
 			}
 
 			public FieldInfo Location { get; }
 			public object? DefaultValue { get; }
 			public string Name { get; }
+			public Arity Arity { get; }
+			public Type ResultType { get; }
 
 			public abstract ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args);
+
+			public IList CreateList()
+			{
+				return (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(new[] { ResultType }));
+			}
 		}
 		public class Option : AbstractArgument
 		{
 			public Option(FieldInfo location, string name, object? defaultValue) :
-				base(location, defaultValue, name)
+				base(location, defaultValue, name, Arity.OneOrZero, typeof(bool))
 			{
 			}
 
@@ -64,8 +80,8 @@ namespace CmdParse
 		public class UnaryArgument : AbstractArgument
 		{
 			public Func<string, ErrorOr<object?>> Parser { get; }
-			public UnaryArgument(FieldInfo location, string name, object? defaultValue, Func<string, ErrorOr<object?>> parser) :
-				base(location, defaultValue, name)
+			public UnaryArgument(FieldInfo location, string name, object? defaultValue, Arity arity, Type type, Func<string, ErrorOr<object?>> parser) :
+				base(location, defaultValue, name, arity, type)
 			{
 				Parser = parser;
 			}
@@ -91,20 +107,38 @@ namespace CmdParse
 				var defaultValue = field.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
 				if (defaultValue != null && !field.FieldType.IsInstanceOfType(defaultValue))
 					throw new InvalidOperationException("Wrong default type");
+				Type elemType;
+				Arity arity;
+				if (field.FieldType.IsGenericType && field.FieldType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+				{
+					elemType = field.FieldType.GetGenericArguments().Single();
+					arity = Arity.ZeroOrMany;
+				}
+				else
+				{
+					elemType = field.FieldType;
+					arity = Arity.OneOrZero;
+				}
 
-				if (field.FieldType == typeof(bool))
+				if (elemType == typeof(bool) && arity == Arity.OneOrZero)
 				{
 					arguments.Add(new Option(field, name, defaultValue ?? false));
 				}
-				else if (field.FieldType == typeof(int))
+				else if (elemType == typeof(bool))
 				{
-					arguments.Add(new UnaryArgument(field, name, defaultValue, str => int.TryParse(str, out var val)
+					arguments.Add(new UnaryArgument(field, name, defaultValue, arity, elemType, str => bool.TryParse(str, out var val)
+						? ErrorOr.FromValue<object?>(val)
+						: "Invalid boolean"));
+				}
+				else if (elemType == typeof(int))
+				{
+					arguments.Add(new UnaryArgument(field, name, defaultValue, arity, elemType, str => int.TryParse(str, out var val)
 						? ErrorOr.FromValue<object?>(val)
 						: "Invalid integer"));
 				}
 				else if (field.FieldType == typeof(double))
 				{
-					arguments.Add(new UnaryArgument(field, name, defaultValue, str => double.TryParse(str, out var val)
+					arguments.Add(new UnaryArgument(field, name, defaultValue, arity, elemType, str => double.TryParse(str, out var val)
 						? ErrorOr.FromValue<object?>(val)
 						: "Invalid double"));
 				}
@@ -126,7 +160,15 @@ namespace CmdParse
 					if (parseResult.MaybeError is string error)
 						return error;
 					var (count, value) = parseResult.Value;
-					if (!values.TryAdd(matchedArg, value))
+					if (matchedArg.Arity != Arity.OneOrZero)
+					{
+						if (!values.TryGetValue(matchedArg, out object? list) || list == null)
+						{
+							list = matchedArg.CreateList();
+							values.Add(matchedArg, list);
+						}
+						((IList)list).Add(value);
+					} else if (!values.TryAdd(matchedArg, value))
 						return $"Duplicate option '{arg}'.";
 					i += count;
 				}
@@ -141,6 +183,8 @@ namespace CmdParse
 				{
 					if (arg.DefaultValue is object defaultValue)
 						values.Add(arg, defaultValue);
+					else if (arg.Arity == Arity.ZeroOrMany)
+						values.Add(arg, arg.CreateList());
 					else
 						return $"Missing mandatory argument '--{arg.Name}'.";
 				}

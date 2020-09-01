@@ -1,5 +1,7 @@
 using CmdParse;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using Xunit;
 
 namespace Tests
@@ -123,6 +125,39 @@ namespace Tests
 		{
 			var result = CommandLineParser.Parse<DoubleTypeTest>(new[] { "--Value", "3,145" });
 			Assert.Equal(3.145, result.Value);
+		}
+
+		class ManyIntsType
+		{
+			public IEnumerable<int> Value;
+		}
+		[Fact]
+		public void ParseManyInts_None()
+		{
+			var result = CommandLineParser.Parse<ManyIntsType>(new string[0]);
+			Assert.Empty(result.Value);
+		}
+		[Fact]
+		public void ParseManyInts_Single()
+		{
+			var result = CommandLineParser.Parse<ManyIntsType>(new[] { "--Value", "1" });
+			Assert.Equal(new[] { 1 }, result.Value);
+		}
+		[Fact]
+		public void ParseManyInts_Many()
+		{
+			var result = CommandLineParser.Parse<ManyIntsType>(new[] { "--Value", "1", "--Value", "2", "--Value", "3" });
+			Assert.Equal(new[] { 1, 2, 3 }, result.Value);
+		}
+		class ManyBoolsType
+		{
+			public IEnumerable<bool> Value;
+		}
+		[Fact]
+		public void ParseManyBooleans_Many()
+		{
+			var result = CommandLineParser.Parse<ManyBoolsType>(new[] { "--Value", "true", "--Value", "false", "--Value", "true" });
+			Assert.Equal(new[] { true, false, true }, result.Value);
 		}
 	}
 }
