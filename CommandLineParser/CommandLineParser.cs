@@ -6,7 +6,6 @@ using System.Reflection;
 
 namespace CmdParse
 {
-
 	public static class CommandLineParser
 	{
 		public static T Parse<T>(string[] args)
@@ -22,12 +21,12 @@ namespace CmdParse
 
 	public class CmdOptionDefaultAttribute : Attribute
 	{
-		public CmdOptionDefaultAttribute(bool defaultValue)
+		public CmdOptionDefaultAttribute(object defaultValue)
 		{
 			DefaultValue = defaultValue;
 		}
 
-		public bool DefaultValue { get; }
+		public object DefaultValue { get; }
 	}
 
 	public class CommandLineConfiguration
@@ -54,7 +53,7 @@ namespace CmdParse
 		}
 		public class Option : AbstractArgument
 		{
-			public Option(FieldInfo location, string name, bool defaultValue) :
+			public Option(FieldInfo location, string name, object? defaultValue) :
 				base(location, defaultValue, name)
 			{
 			}
@@ -64,8 +63,8 @@ namespace CmdParse
 		}
 		public class IntegerArgument : AbstractArgument
 		{
-			public IntegerArgument(FieldInfo location, string name) :
-				base(location, null, name)
+			public IntegerArgument(FieldInfo location, string name, object? defaultValue) :
+				base(location, defaultValue, name)
 			{
 			}
 			public override ErrorOr<(int Count, object Value)> Parse(IEnumerable<string> args)
@@ -95,7 +94,8 @@ namespace CmdParse
 				else if (field.FieldType == typeof(int))
 				{
 					var name = field.Name;
-					arguments.Add(new IntegerArgument(field, name));
+					var defaultValue = field.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
+					arguments.Add(new IntegerArgument(field, name, defaultValue));
 				}
 			}
 

@@ -92,5 +92,16 @@ namespace Tests
 			var result = CommandLineParser.ParseWithError<IntTestType1>(new [] {"--Value1", "123", "--Value1", "456" });
 			Assert.False(result.IsOkay);
 		}
+		public class IntTestType_WithDefault
+		{
+			[CmdOptionDefault(666)]
+			public int Value1;
+		}
+		[Fact]
+		public void IntParse_WithDefault()
+		{
+			var result = CommandLineParser.Parse<IntTestType_WithDefault>(new string[] {});
+			Assert.Equal(666, result.Value1);
+		}
 	}
 }
