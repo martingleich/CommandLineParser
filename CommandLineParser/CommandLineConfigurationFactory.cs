@@ -11,13 +11,20 @@ namespace CmdParse
 		public CommandLineConfiguration Create(Type t)
 		{
 			var fields = t.GetFields(BindingFlags.Public | BindingFlags.Instance);
-			var arguments = fields.Select(CreateArgument).ToImmutableArray();
+			var arguments = fields.ToImmutableDictionary(f => f, CreateArgument);
 
-			var argumentLookup = CreateLookupTable(arguments);
-			return new CommandLineConfiguration(argumentLookup);
+			var argumentLookup = CreateLookupTable(arguments.Values);
+			object Factory(IDictionary<AbstractArgument, object?> values)
+			{
+				var result = Activator.CreateInstance(t);
+				foreach (var arg in arguments)
+					arg.Key.SetValue(result, values[arg.Value]);
+				return result;
+			}
+			return new CommandLineConfiguration(argumentLookup, Factory);
 		}
 
-		private ImmutableDictionary<string, AbstractArgument> CreateLookupTable(ImmutableArray<AbstractArgument> arguments)
+		private ImmutableDictionary<string, AbstractArgument> CreateLookupTable(IEnumerable<AbstractArgument> arguments)
 		{
 			var argumentLookup = new Dictionary<string, AbstractArgument>();
 			foreach (var arg in arguments)
@@ -54,23 +61,23 @@ namespace CmdParse
 
 			if (elemType == typeof(bool) && arity == Arity.OneOrZero)
 			{
-				return new Option(field, name, shortName, defaultValue ?? false);
+				return new Option(name, shortName, defaultValue ?? false);
 			}
 			else if (elemType == typeof(bool))
 			{
-				return new UnaryArgument(field, name, shortName, defaultValue, arity, elemType, str => bool.TryParse(str, out var val)
+				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, str => bool.TryParse(str, out var val)
 					? ErrorOr.FromValue<object?>(val)
-					: "Invalid boolean");
+					: "Invalid boolean"));
 			}
 			else if (elemType == typeof(int))
 			{
-				return new UnaryArgument(field, name, shortName, defaultValue, arity, elemType, str => int.TryParse(str, out var val)
+				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, str => int.TryParse(str, out var val)
 					? ErrorOr.FromValue<object?>(val)
 					: "Invalid integer");
 			}
 			else if (elemType == typeof(double))
 			{
-				return new UnaryArgument(field, name, shortName, defaultValue, arity, elemType, str => double.TryParse(str, out var val)
+				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, str => double.TryParse(str, out var val)
 					? ErrorOr.FromValue<object?>(val)
 					: "Invalid double");
 			}

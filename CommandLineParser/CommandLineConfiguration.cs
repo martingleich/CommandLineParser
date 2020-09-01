@@ -9,11 +9,15 @@ namespace CmdParse
 
 	public class CommandLineConfiguration
 	{
-		public CommandLineConfiguration(ImmutableDictionary<string, AbstractArgument> argumentLookup)
+		public CommandLineConfiguration(
+			ImmutableDictionary<string, AbstractArgument> argumentLookup,
+			Func<IDictionary<AbstractArgument, object?>, object> resultFactory)
 		{
+			ResultFactory = resultFactory;
 			ArgumentLookup = argumentLookup;
 		}
 
+		public Func<IDictionary<AbstractArgument, object?>, object> ResultFactory { get; }
 		public ImmutableDictionary<string, AbstractArgument> ArgumentLookup { get; }
 		public IEnumerable<AbstractArgument> Arguments => ArgumentLookup.Values;
 
@@ -65,10 +69,7 @@ namespace CmdParse
 				}
 			}
 
-			var result = (T)Activator.CreateInstance(typeof(T));
-			foreach (var arg in Arguments)
-				arg.Location.SetValue(result, values[arg]);
-			return ErrorOr.FromValue(result);
+			return ErrorOr.FromValue((T)ResultFactory(values));
 		}
 	}
 }
