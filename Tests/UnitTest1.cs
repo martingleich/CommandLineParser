@@ -43,6 +43,12 @@ namespace Tests
 			var result = CommandLineParser.ParseWithError<BooleanTestType1>(new[] { "--blub" });
 			Assert.False(result.IsOkay);
 		}
+		[Fact]
+		public void BooleanParse_DuplicatOption()
+		{
+			var result = CommandLineParser.ParseWithError<BooleanTestType1>(new[] { "--Value1", "--Value1" });
+			Assert.False(result.IsOkay);
+		}
 		public class BooleanTestType_WithDefault
 		{
 			public bool Value1;

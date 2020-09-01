@@ -80,7 +80,8 @@ namespace CmdParse
 				var matched = Options.Where(b => b.LongName == arg).FirstOrDefault();
 				if (matched == null)
 					return $"Unknown option '{arg}'.";
-				values.Add(matched, !matched.DefaultValue);
+				if (!values.TryAdd(matched, !matched.DefaultValue))
+					return $"Duplicate option '{arg}'.";
 			}
 			foreach (var arg in Options)
 			{
