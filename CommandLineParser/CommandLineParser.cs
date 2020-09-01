@@ -85,16 +85,14 @@ namespace CmdParse
 			var arguments = new List<AbstractArgument>();
 			foreach (var field in fields)
 			{
+				var name = field.Name;
+				var defaultValue = field.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
 				if (field.FieldType == typeof(bool))
 				{
-					var name = field.Name;
-					var defaultValue = field.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue ?? false;
-					arguments.Add(new Option(field, name, defaultValue));
+					arguments.Add(new Option(field, name, defaultValue ?? false));
 				}
 				else if (field.FieldType == typeof(int))
 				{
-					var name = field.Name;
-					var defaultValue = field.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
 					arguments.Add(new IntegerArgument(field, name, defaultValue));
 				}
 			}
