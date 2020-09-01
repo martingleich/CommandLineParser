@@ -7,11 +7,12 @@ namespace CmdParse
 {
 	public abstract class AbstractArgument
 	{
-		protected AbstractArgument(FieldInfo location, object? defaultValue, string name, Arity arity, Type resultType)
+		protected AbstractArgument(FieldInfo location, object? defaultValue, string name, string? shortName, Arity arity, Type resultType)
 		{
 			Location = location;
 			DefaultValue = defaultValue;
 			Name = name;
+			ShortName = shortName;
 			Arity = arity;
 			ResultType = resultType;
 		}
@@ -19,6 +20,7 @@ namespace CmdParse
 		public FieldInfo Location { get; }
 		public object? DefaultValue { get; }
 		public string Name { get; }
+		public string? ShortName { get; }
 		public Arity Arity { get; }
 		public Type ResultType { get; }
 

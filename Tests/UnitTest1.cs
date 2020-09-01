@@ -112,7 +112,7 @@ namespace Tests
 		[Fact]
 		public void WrongDefaultTypeTest()
 		{
-			Assert.Throws<InvalidOperationException>(() => CommandLineParser.Parse<WrongDefaultType>(new string[] { }));
+			Assert.Throws<ArgumentException>(() => CommandLineParser.Parse<WrongDefaultType>(new string[] { }));
 		}
 
 		class DoubleTypeTest
@@ -157,6 +157,32 @@ namespace Tests
 		{
 			var result = CommandLineParser.Parse<ManyBoolsType>(new[] { "--Value", "true", "--Value", "false", "--Value", "true" });
 			Assert.Equal(new[] { true, false, true }, result.Value);
+		}
+		class NameOptionsType
+		{
+			[CmdName("publicValue")]
+			public int InternalValue;
+			[CmdName("input", "i")]
+			public int Input;
+		}
+		[Fact]
+		public void NameOptions()
+		{
+			var result = CommandLineParser.Parse<NameOptionsType>(new[] { "--publicValue", "23", "-i", "17"});
+			Assert.Equal(23, result.InternalValue);
+			Assert.Equal(17, result.Input);
+		}
+		class DuplicateNameErrorType
+		{
+			[CmdName("Name")]
+			public bool InternalValue;
+			[CmdName("Name")]
+			public bool Input;
+		}
+		[Fact]
+		public void DuplicateNameError()
+		{
+			Assert.Throws<ArgumentException>(() => CommandLineParser.Parse<DuplicateNameErrorType>(new string[0]));
 		}
 	}
 }

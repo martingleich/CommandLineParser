@@ -24,10 +24,13 @@ namespace CmdParse
 			var arguments = new List<AbstractArgument>();
 			foreach (var field in fields)
 			{
-				var name = field.Name;
+				var nameAttribute = field.GetCustomAttribute<CmdNameAttribute>();
+				var name = nameAttribute?.Name ?? field.Name;
+				var shortName = nameAttribute?.ShortName;
+
 				var defaultValue = field.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
 				if (defaultValue != null && !field.FieldType.IsInstanceOfType(defaultValue))
-					throw new InvalidOperationException("Wrong default type");
+					throw new ArgumentException("Wrong default type");
 				Type elemType;
 				Arity arity;
 				if (field.FieldType.IsGenericType && field.FieldType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -43,36 +46,39 @@ namespace CmdParse
 
 				if (elemType == typeof(bool) && arity == Arity.OneOrZero)
 				{
-					arguments.Add(new Option(field, name, defaultValue ?? false));
+					arguments.Add(new Option(field, name, shortName, defaultValue ?? false));
 				}
 				else if (elemType == typeof(bool))
 				{
-					arguments.Add(new UnaryArgument(field, name, defaultValue, arity, elemType, str => bool.TryParse(str, out var val)
+					arguments.Add(new UnaryArgument(field, name, shortName, defaultValue, arity, elemType, str => bool.TryParse(str, out var val)
 						? ErrorOr.FromValue<object?>(val)
 						: "Invalid boolean"));
 				}
 				else if (elemType == typeof(int))
 				{
-					arguments.Add(new UnaryArgument(field, name, defaultValue, arity, elemType, str => int.TryParse(str, out var val)
+					arguments.Add(new UnaryArgument(field, name, shortName, defaultValue, arity, elemType, str => int.TryParse(str, out var val)
 						? ErrorOr.FromValue<object?>(val)
 						: "Invalid integer"));
 				}
 				else if (field.FieldType == typeof(double))
 				{
-					arguments.Add(new UnaryArgument(field, name, defaultValue, arity, elemType, str => double.TryParse(str, out var val)
+					arguments.Add(new UnaryArgument(field, name, shortName, defaultValue, arity, elemType, str => double.TryParse(str, out var val)
 						? ErrorOr.FromValue<object?>(val)
 						: "Invalid double"));
 				}
 			}
 
-			var argumentLookup = arguments.ToImmutableDictionary(a => a.Name);
-			return new CommandLineConfiguration(argumentLookup);
+			var argumentLookup = arguments.ToDictionary(a => "--" + a.Name);
+			foreach (var arg in arguments)
+			{
+				if (arg.ShortName is string shortName)
+					argumentLookup.Add("-" + shortName, arg);
+			}
+			return new CommandLineConfiguration(argumentLookup.ToImmutableDictionary());
 		}
 
 		public AbstractArgument? FindArgument(string arg)
 		{
-			if (arg.StartsWith("--"))
-				arg = arg.Remove(0, 2);
 			ArgumentLookup.TryGetValue(arg, out var matchedArg);
 			return matchedArg;
 		}

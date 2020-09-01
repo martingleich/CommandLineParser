@@ -8,8 +8,8 @@ namespace CmdParse
 	public class UnaryArgument : AbstractArgument
 	{
 		public Func<string, ErrorOr<object?>> Parser { get; }
-		public UnaryArgument(FieldInfo location, string name, object? defaultValue, Arity arity, Type type, Func<string, ErrorOr<object?>> parser) :
-			base(location, defaultValue, name, arity, type)
+		public UnaryArgument(FieldInfo location, string name, string? shortName, object? defaultValue, Arity arity, Type type, Func<string, ErrorOr<object?>> parser) :
+			base(location, defaultValue, name, shortName, arity, type)
 		{
 			Parser = parser;
 		}
