@@ -229,5 +229,23 @@ namespace Tests
 			var result = CommandLineParser.Parse<StringType>(new[] { "--Value", "Hello"});
 			Assert.Equal("Hello", result.Value);
 		}
+		class FileInfoType
+		{
+			public FileInfo Value;
+			public DirectoryInfo Path;
+		}
+		[Fact]
+		public void FileInfo()
+		{
+			var result = CommandLineParser.Parse<FileInfoType>(new[] { "--Value", "C:/Path", "--Path", "path"});
+			Assert.Equal(new FileInfo("C:/Path").FullName, result.Value.FullName);
+			Assert.Equal(new DirectoryInfo("path").FullName, result.Path.FullName);
+		}
+		[Fact]
+		public void FileInfoError()
+		{
+			var result = CommandLineParser.ParseWithError<FileInfoType>(new[] { "--Value", "   "});
+			Assert.False(result.IsOkay);
+		}
 	}
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -14,6 +15,8 @@ namespace CmdParse
 			[typeof(int)] = Converters.TryParseInt,
 			[typeof(double)] = Converters.TryParseDouble,
 			[typeof(string)] = Converters.TryParseString,
+			[typeof(DirectoryInfo)] = str => ErrorOr.Try<object?>(() => new DirectoryInfo(str)),
+			[typeof(FileInfo)] = str => ErrorOr.Try<object?>(() => new FileInfo(str)),
 		};
 
 		private class WrittableMember

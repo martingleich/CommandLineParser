@@ -42,5 +42,16 @@ namespace CmdParse
 	public static class ErrorOr
 	{
 		public static ErrorOr<T> FromValue<T>(T value) => ErrorOr<T>.FromValue(value);
+		public static ErrorOr<T> Try<T>(Func<T> func)
+		{
+			try
+			{
+				return FromValue(func());
+			}
+			catch (Exception e)
+			{
+				return e.Message;
+			}
+		}
 	}
 }
