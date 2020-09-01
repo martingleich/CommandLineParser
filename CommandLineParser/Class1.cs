@@ -6,9 +6,36 @@ using System.Reflection;
 
 namespace CmdParse
 {
+	public abstract class ErrorOr<T>
+	{
+		private sealed class Value : ErrorOr<T>
+		{
+			public T _value;
+			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error) => okay(_value);
+		}
+		private sealed class Error : ErrorOr<T>
+		{
+			public string _error;
+			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error) => error(_error);
+		}
+
+		public abstract TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error);
+
+		public static implicit operator ErrorOr<T>(string error) => new Error() { _error = error };
+		public static ErrorOr<T> FromValue(T value) => new Value() { _value = value };
+	}
+	public static class ErrorOr
+	{
+		public static ErrorOr<T> FromValue<T>(T value) => ErrorOr<T>.FromValue(value);
+	}
+
 	public static class CommandLineParser
 	{
 		public static T Parse<T>(string[] args)
+			=> ParseWithError<T>(args).Accept(
+				okay: r => r,
+				error: error => throw new InvalidOperationException(error));
+		public static ErrorOr<T> ParseWithError<T>(string[] args)
 		{
 			var options = CommandLineConfiguration.Create(typeof(T));
 			return options.Parse<T>(args);
@@ -67,7 +94,7 @@ namespace CmdParse
 			return new CommandLineConfiguration(options.ToImmutableArray());
 		}
 
-		public T Parse<T>(string[] args)
+		public ErrorOr<T> Parse<T>(string[] args)
 		{
 			Dictionary<Option, bool> values = new Dictionary<Option, bool>();
 			foreach (var arg in args)
@@ -84,7 +111,7 @@ namespace CmdParse
 			var result = (T)Activator.CreateInstance(typeof(T));
 			foreach(var opt in Options)
 				opt.Location.SetValue(result, values[opt]);
-			return result;
+			return ErrorOr.FromValue(result);
 		}
 	}
 }
