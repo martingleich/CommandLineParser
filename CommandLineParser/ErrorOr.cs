@@ -4,22 +4,22 @@ namespace CmdParse
 {
 	public abstract class ErrorOr<T>
 	{
-		private sealed class Value : ErrorOr<T>
+		private sealed class ValueT : ErrorOr<T>
 		{
 			public T _value;
 
-			public Value(T value)
+			public ValueT(T value)
 			{
 				_value = value;
 			}
 
 			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error) => okay(_value);
 		}
-		private sealed class Error : ErrorOr<T>
+		private sealed class ErrorT : ErrorOr<T>
 		{
 			public string _error;
 
-			public Error(string error)
+			public ErrorT(string error)
 			{
 				_error = error;
 			}
@@ -31,10 +31,11 @@ namespace CmdParse
 
 		public bool IsOkay => Accept(_ => true, _ => false);
 
-		public static implicit operator ErrorOr<T>(string error) => new Error(error);
-		public static ErrorOr<T> FromValue(T value) => new Value(value);
+		public static implicit operator ErrorOr<T>(string error) => new ErrorT(error);
+		public static ErrorOr<T> FromValue(T value) => new ValueT(value);
 
 		public string? MaybeError => Accept<string?>(_ => null, e => e);
+		public T Value => Accept<T>(x => x, e => throw new InvalidOperationException());
 	}
 	public static class ErrorOr
 	{
