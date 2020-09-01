@@ -70,14 +70,14 @@ namespace CmdParse
 			public override ErrorOr<(int Count, object Value)> Parse(IEnumerable<string> args)
 			{
 				var arg = args.FirstOrDefault();
-				if(!int.TryParse(arg, out int value))
+				if (!int.TryParse(arg, out int value))
 					return $"Missing the value for '{arg}'.";
 				return ErrorOr.FromValue((1, (object)value));
 			}
 		}
 
 		public ImmutableArray<AbstractArgument> Arguments { get; }
-		
+
 		public static CommandLineConfiguration Create(Type t)
 		{
 			// 1) Scan public writable values of t.
@@ -103,7 +103,7 @@ namespace CmdParse
 		public ErrorOr<T> Parse<T>(string[] args)
 		{
 			Dictionary<AbstractArgument, object> values = new Dictionary<AbstractArgument, object>();
-			for(int i =0; i< args.Length; ++i)
+			for (int i = 0; i < args.Length; ++i)
 			{
 				var arg = args[i];
 				var matchedArg = Arguments.Where(b => "--" + b.Name == arg).FirstOrDefault();
@@ -113,7 +113,7 @@ namespace CmdParse
 					if (parseResult.MaybeError is string error)
 						return error;
 					var (count, value) = parseResult.Value;
-					if(!values.TryAdd(matchedArg, value))
+					if (!values.TryAdd(matchedArg, value))
 						return $"Duplicate option '{arg}'.";
 					i += count;
 				}
@@ -134,7 +134,7 @@ namespace CmdParse
 			}
 
 			var result = (T)Activator.CreateInstance(typeof(T));
-			foreach(var arg in Arguments)
+			foreach (var arg in Arguments)
 				arg.Location.SetValue(result, values[arg]);
 			return ErrorOr.FromValue(result);
 		}
