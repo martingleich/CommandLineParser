@@ -49,7 +49,7 @@ namespace CmdParse
 			public object? DefaultValue { get; }
 			public string Name { get; }
 
-			public abstract ErrorOr<(int Count, object Value)> Parse(IEnumerable<string> args);
+			public abstract ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args);
 		}
 		public class Option : AbstractArgument
 		{
@@ -58,21 +58,24 @@ namespace CmdParse
 			{
 			}
 
-			public override ErrorOr<(int Count, object Value)> Parse(IEnumerable<string> args)
-				=> ErrorOr.FromValue((0, (object)!(bool)DefaultValue));
+			public override ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
+				=> ErrorOr.FromValue((0, (object?)!(bool)DefaultValue));
 		}
-		public class IntegerArgument : AbstractArgument
+		
+		public class UnaryArgument : AbstractArgument
 		{
-			public IntegerArgument(FieldInfo location, string name, object? defaultValue) :
+			public Func<string, ErrorOr<object?>> Parser { get; }
+			public UnaryArgument(FieldInfo location, string name, object? defaultValue, Func<string, ErrorOr<object?>> parser) :
 				base(location, defaultValue, name)
 			{
+				Parser = parser;
 			}
-			public override ErrorOr<(int Count, object Value)> Parse(IEnumerable<string> args)
+			public override ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
 			{
 				var arg = args.FirstOrDefault();
-				if (!int.TryParse(arg, out int value))
+				if(args == null)
 					return $"Missing the value for '{arg}'.";
-				return ErrorOr.FromValue((1, (object)value));
+				return Parser(arg).Apply(x => (1, x));
 			}
 		}
 
@@ -87,13 +90,18 @@ namespace CmdParse
 			{
 				var name = field.Name;
 				var defaultValue = field.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
+				if (defaultValue != null && !field.FieldType.IsInstanceOfType(defaultValue))
+					throw new InvalidOperationException("Wrong default type");
+
 				if (field.FieldType == typeof(bool))
 				{
 					arguments.Add(new Option(field, name, defaultValue ?? false));
 				}
 				else if (field.FieldType == typeof(int))
 				{
-					arguments.Add(new IntegerArgument(field, name, defaultValue));
+					arguments.Add(new UnaryArgument(field, name, defaultValue, str => int.TryParse(str, out var val)
+						? ErrorOr.FromValue<object?>(val)
+						: "Invalid integer"));
 				}
 			}
 

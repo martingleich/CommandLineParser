@@ -103,5 +103,15 @@ namespace Tests
 			var result = CommandLineParser.Parse<IntTestType_WithDefault>(new string[] {});
 			Assert.Equal(666, result.Value1);
 		}
+		public class WrongDefaultType
+		{
+			[CmdOptionDefault(true)]
+			public int Value1;
+		}
+		[Fact]
+		public void WrongDefaultTypeTest()
+		{
+			Assert.Throws<InvalidOperationException>(() => CommandLineParser.Parse<WrongDefaultType>(new string[] { }));
+		}
 	}
 }

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Data;
 
 namespace CmdParse
 {
@@ -36,6 +38,8 @@ namespace CmdParse
 
 		public string? MaybeError => Accept<string?>(_ => null, e => e);
 		public T Value => Accept<T>(x => x, e => throw new InvalidOperationException());
+		public ErrorOr<TResult> Apply<TResult>(Func<T, TResult> func) =>
+			Accept(x => ErrorOr.FromValue(func(x)), e => e);
 	}
 	public static class ErrorOr
 	{
