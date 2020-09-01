@@ -7,11 +7,23 @@ namespace CmdParse
 		private sealed class Value : ErrorOr<T>
 		{
 			public T _value;
+
+			public Value(T value)
+			{
+				_value = value;
+			}
+
 			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error) => okay(_value);
 		}
 		private sealed class Error : ErrorOr<T>
 		{
 			public string _error;
+
+			public Error(string error)
+			{
+				_error = error;
+			}
+
 			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error) => error(_error);
 		}
 
@@ -19,8 +31,10 @@ namespace CmdParse
 
 		public bool IsOkay => Accept(_ => true, _ => false);
 
-		public static implicit operator ErrorOr<T>(string error) => new Error() { _error = error };
-		public static ErrorOr<T> FromValue(T value) => new Value() { _value = value };
+		public static implicit operator ErrorOr<T>(string error) => new Error(error);
+		public static ErrorOr<T> FromValue(T value) => new Value(value);
+
+		public string? MaybeError => Accept<string?>(_ => null, e => e);
 	}
 	public static class ErrorOr
 	{
