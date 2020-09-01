@@ -77,19 +77,19 @@ namespace Tests
 		[Fact]
 		public void IntParse_MissingValue()
 		{
-			var result = CommandLineParser.ParseWithError<IntTestType1>(new [] {"--Value1" });
+			var result = CommandLineParser.ParseWithError<IntTestType1>(new[] { "--Value1" });
 			Assert.False(result.IsOkay);
 		}
 		[Fact]
 		public void IntParse_MissingValueNoInt()
 		{
-			var result = CommandLineParser.ParseWithError<IntTestType1>(new [] {"--Value1", "Hi" });
+			var result = CommandLineParser.ParseWithError<IntTestType1>(new[] { "--Value1", "Hi" });
 			Assert.False(result.IsOkay);
 		}
 		[Fact]
 		public void IntParse_Duplicate()
 		{
-			var result = CommandLineParser.ParseWithError<IntTestType1>(new [] {"--Value1", "123", "--Value1", "456" });
+			var result = CommandLineParser.ParseWithError<IntTestType1>(new[] { "--Value1", "123", "--Value1", "456" });
 			Assert.False(result.IsOkay);
 		}
 		public class IntTestType_WithDefault
@@ -100,7 +100,7 @@ namespace Tests
 		[Fact]
 		public void IntParse_WithDefault()
 		{
-			var result = CommandLineParser.Parse<IntTestType_WithDefault>(new string[] {});
+			var result = CommandLineParser.Parse<IntTestType_WithDefault>(new string[] { });
 			Assert.Equal(666, result.Value1);
 		}
 		public class WrongDefaultType
@@ -112,6 +112,17 @@ namespace Tests
 		public void WrongDefaultTypeTest()
 		{
 			Assert.Throws<InvalidOperationException>(() => CommandLineParser.Parse<WrongDefaultType>(new string[] { }));
+		}
+
+		class DoubleTypeTest
+		{
+			public double Value;
+		}
+		[Fact]
+		public void ParseDouble()
+		{
+			var result = CommandLineParser.Parse<DoubleTypeTest>(new[] { "--Value", "3,145" });
+			Assert.Equal(3.145, result.Value);
 		}
 	}
 }

@@ -61,7 +61,7 @@ namespace CmdParse
 			public override ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
 				=> ErrorOr.FromValue((0, (object?)!(bool)DefaultValue));
 		}
-		
+
 		public class UnaryArgument : AbstractArgument
 		{
 			public Func<string, ErrorOr<object?>> Parser { get; }
@@ -73,7 +73,7 @@ namespace CmdParse
 			public override ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
 			{
 				var arg = args.FirstOrDefault();
-				if(args == null)
+				if (args == null)
 					return $"Missing the value for '{arg}'.";
 				return Parser(arg).Apply(x => (1, x));
 			}
@@ -102,6 +102,12 @@ namespace CmdParse
 					arguments.Add(new UnaryArgument(field, name, defaultValue, str => int.TryParse(str, out var val)
 						? ErrorOr.FromValue<object?>(val)
 						: "Invalid integer"));
+				}
+				else if (field.FieldType == typeof(double))
+				{
+					arguments.Add(new UnaryArgument(field, name, defaultValue, str => double.TryParse(str, out var val)
+						? ErrorOr.FromValue<object?>(val)
+						: "Invalid double"));
 				}
 			}
 
