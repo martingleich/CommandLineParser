@@ -8,17 +8,42 @@ namespace CmdParse
 {
 	public class CommandLineConfigurationFactory
 	{
+		private class WrittableMember
+		{
+			public MemberInfo Member { get; }
+			public Action<object?, object?> Write { get; }
+			public Type Type { get; }
+			public string Name => Member.Name;
+			public T? GetCustomAttribute<T>() where T : Attribute => Member.GetCustomAttribute<T>();
+
+			public WrittableMember(MemberInfo member, Action<object?, object?> write, Type type)
+			{
+				Member = member;
+				Write = write;
+				Type = type;
+			}
+		}
+		private IEnumerable<WrittableMember> GetWrittableMembers(Type t)
+		{
+			foreach (var field in t.GetFields(BindingFlags.Public | BindingFlags.Instance))
+				if(!field.IsInitOnly)
+					yield return new WrittableMember(field, field.SetValue, field.FieldType);
+			foreach (var prop in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+				if (prop.CanWrite)
+					yield return new WrittableMember(prop, prop.SetValue, prop.PropertyType);
+		}
+
 		public CommandLineConfiguration Create(Type t)
 		{
-			var fields = t.GetFields(BindingFlags.Public | BindingFlags.Instance);
-			var arguments = fields.ToImmutableDictionary(f => f, CreateArgument);
+			var settableMembers = GetWrittableMembers(t);
+			var arguments = settableMembers.ToImmutableDictionary(f => f, CreateArgument);
 
 			var argumentLookup = CreateLookupTable(arguments.Values);
 			object Factory(IDictionary<AbstractArgument, object?> values)
 			{
 				var result = Activator.CreateInstance(t);
 				foreach (var arg in arguments)
-					arg.Key.SetValue(result, values[arg.Value]);
+					arg.Key.Write(result, values[arg.Value]);
 				return result;
 			}
 			return new CommandLineConfiguration(argumentLookup, Factory);
@@ -37,25 +62,25 @@ namespace CmdParse
 			return argumentLookup.ToImmutableDictionary();
 		}
 
-		public AbstractArgument CreateArgument(FieldInfo field)
+		private AbstractArgument CreateArgument(WrittableMember memberInfo)
 		{
-			var nameAttribute = field.GetCustomAttribute<CmdNameAttribute>();
-			var name = nameAttribute?.Name ?? field.Name;
+			var nameAttribute = memberInfo.GetCustomAttribute<CmdNameAttribute>();
+			var name = nameAttribute?.Name ?? memberInfo.Name;
 			var shortName = nameAttribute?.ShortName;
 
-			var defaultValue = field.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
-			if (defaultValue != null && !field.FieldType.IsInstanceOfType(defaultValue))
+			var defaultValue = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
+			if (defaultValue != null && !memberInfo.Type.IsInstanceOfType(defaultValue))
 				throw new ArgumentException("Wrong default type");
 			Type elemType;
 			Arity arity;
-			if (field.FieldType.IsGenericType && field.FieldType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+			if (memberInfo.Type.IsGenericType && memberInfo.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
 			{
-				elemType = field.FieldType.GetGenericArguments().Single();
+				elemType = memberInfo.Type.GetGenericArguments().Single();
 				arity = Arity.ZeroOrMany;
 			}
 			else
 			{
-				elemType = field.FieldType;
+				elemType = memberInfo.Type;
 				arity = Arity.OneOrZero;
 			}
 

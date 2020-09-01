@@ -1,6 +1,7 @@
 using CmdParse;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace Tests
@@ -17,6 +18,17 @@ namespace Tests
 			Assert.NotNull(result);
 		}
 
+		public class ReadonlyTestType
+		{
+			public readonly int Value;
+		}
+		[Fact]
+		public void ReadonlyTest()
+		{
+			var config = new CommandLineConfigurationFactory().Create(typeof(ReadonlyTestType));
+			Assert.DoesNotContain("Value", config.Arguments.Select(a => a.Name));
+		}
+
 		public class BooleanTestType1
 		{
 			public bool Value1;
@@ -27,6 +39,7 @@ namespace Tests
 		public void BooleanParse()
 		{
 			var result = CommandLineParser.Parse<BooleanTestType1>(new[] { "--Value1" });
+
 			Assert.True(result.Value1);
 			Assert.False(result.Value2);
 		}
@@ -192,6 +205,18 @@ namespace Tests
 		public void UnsupportedTypeError()
 		{
 			Assert.Throws<ArgumentException>(() => CommandLineParser.Parse<UnsupportedTypeErrorType>(new string[0]));
+		}
+		class PropertyType
+		{
+			public bool Value { get; set; }
+			public bool IgnoredValue { get; }
+		}
+		[Fact]
+		public void Property()
+		{
+			var config = new CommandLineConfigurationFactory().Create(typeof(PropertyType));
+			Assert.Contains("Value", config.Arguments.Select(a => a.Name));
+			Assert.DoesNotContain("IgnoredValue", config.Arguments.Select(a => a.Name));
 		}
 	}
 }
