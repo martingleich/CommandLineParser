@@ -61,7 +61,6 @@ namespace CmdParse
 			public override ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
 				=> ErrorOr.FromValue((0, (object?)!(bool)DefaultValue));
 		}
-
 		public class UnaryArgument : AbstractArgument
 		{
 			public Func<string, ErrorOr<object?>> Parser { get; }
