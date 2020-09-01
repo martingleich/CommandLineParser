@@ -71,18 +71,7 @@ namespace CmdParse
 			var defaultValue = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
 			if (defaultValue != null && !memberInfo.Type.IsInstanceOfType(defaultValue))
 				throw new ArgumentException("Wrong default type");
-			Type elemType;
-			Arity arity;
-			if (memberInfo.Type.IsGenericType && memberInfo.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-			{
-				elemType = memberInfo.Type.GetGenericArguments().Single();
-				arity = Arity.ZeroOrMany;
-			}
-			else
-			{
-				elemType = memberInfo.Type;
-				arity = Arity.OneOrZero;
-			}
+			var (elemType, arity) = HandleEnumerable(memberInfo);
 
 			if (elemType == typeof(bool) && arity == Arity.OneOrZero)
 			{
@@ -114,6 +103,14 @@ namespace CmdParse
 			{
 				throw new ArgumentException($"Unsupported type {elemType}.");
 			}
+		}
+
+		private (Type elemType, Arity arity) HandleEnumerable(WrittableMember memberInfo)
+		{
+			if (memberInfo.Type.IsGenericType && memberInfo.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+				return (memberInfo.Type.GetGenericArguments().Single(), Arity.ZeroOrMany);
+			else
+				return (memberInfo.Type, Arity.OneOrZero);
 		}
 	}
 }
