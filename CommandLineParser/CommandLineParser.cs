@@ -15,8 +15,8 @@ namespace CmdParse
 				error: error => throw new InvalidOperationException(error));
 		public static ErrorOr<T> ParseWithError<T>(string[] args)
 		{
-			var options = CommandLineConfiguration.Create(typeof(T));
-			return options.Parse<T>(args);
+			var config = CommandLineConfiguration.Create(typeof(T));
+			return config.Parse<T>(args);
 		}
 	}
 
