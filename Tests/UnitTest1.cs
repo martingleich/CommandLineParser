@@ -1,6 +1,7 @@
 using CmdParse;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Xunit;
 
@@ -217,6 +218,16 @@ namespace Tests
 			var config = new CommandLineConfigurationFactory().Create(typeof(PropertyType));
 			Assert.Contains("Value", config.Arguments.Select(a => a.Name));
 			Assert.DoesNotContain("IgnoredValue", config.Arguments.Select(a => a.Name));
+		}
+		class StringType
+		{
+			public string Value;
+		}
+		[Fact]
+		public void String()
+		{
+			var result = CommandLineParser.Parse<StringType>(new[] { "--Value", "Hello"});
+			Assert.Equal("Hello", result.Value);
 		}
 	}
 }

@@ -106,6 +106,10 @@ namespace CmdParse
 					? ErrorOr.FromValue<object?>(val)
 					: "Invalid double");
 			}
+			else if (elemType == typeof(string))
+			{
+				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, ErrorOr.FromValue<object?>);
+			}
 			else
 			{
 				throw new ArgumentException($"Unsupported type {elemType}.");
