@@ -110,7 +110,7 @@ namespace CmdParse
 
 		public ErrorOr<T> Parse<T>(string[] args)
 		{
-			Dictionary<AbstractArgument, object> values = new Dictionary<AbstractArgument, object>();
+			var values = new Dictionary<AbstractArgument, object?>();
 			for (int i = 0; i < args.Length; ++i)
 			{
 				var arg = args[i];
