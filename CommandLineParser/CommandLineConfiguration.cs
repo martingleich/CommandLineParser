@@ -69,14 +69,20 @@ namespace CmdParse
 			return new CommandLineConfiguration(argumentLookup);
 		}
 
+		public AbstractArgument? FindArgument(string arg)
+		{
+			if (arg.StartsWith("--"))
+				arg = arg.Remove(0, 2);
+			ArgumentLookup.TryGetValue(arg, out var matchedArg);
+			return matchedArg;
+		}
 		public ErrorOr<T> Parse<T>(string[] args)
 		{
 			var values = new Dictionary<AbstractArgument, object?>();
 			for (int i = 0; i < args.Length; ++i)
 			{
 				var arg = args[i];
-				var matchedArg = Arguments.Where(b => "--" + b.Name == arg).FirstOrDefault();
-				if (matchedArg != null)
+				if (FindArgument(arg) is AbstractArgument matchedArg)
 				{
 					var parseResult = matchedArg.Parse(args.Skip(i + 1));
 					if (parseResult.MaybeError is string error)
