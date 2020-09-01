@@ -23,14 +23,6 @@ namespace Tests
 			private bool HiddenValue;
 		}
 		[Fact]
-		public void BooleanConfigCreate()
-		{
-			var config = CommandLineConfiguration.Create(typeof(BooleanTestType1));
-			Assert.Contains(config.Options, a => a.Name == "Value1");
-			Assert.Contains(config.Options, a => a.Name == "Value2");
-			Assert.DoesNotContain(config.Options, a => a.Name == "HiddenValue");
-		}
-		[Fact]
 		public void BooleanParse()
 		{
 			var result = CommandLineParser.Parse<BooleanTestType1>(new[] { "--Value1" });

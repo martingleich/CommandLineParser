@@ -32,113 +32,112 @@ namespace CmdParse
 
 	public class CommandLineConfiguration
 	{
-		public CommandLineConfiguration(
-			ImmutableArray<Option> booleanArguments,
-			ImmutableArray<IntegerArgument> integerArguments)
+		public CommandLineConfiguration(ImmutableArray<AbstractArgument> arguments)
 		{
-			Options = booleanArguments;
-			IntegerArguments = integerArguments;
+			Arguments = arguments;
 		}
 
-		public class Option
+		public abstract class AbstractArgument
 		{
-			public Option(FieldInfo location, string name, bool defaultValue)
+			protected AbstractArgument(FieldInfo location, object? defaultValue, string name)
 			{
 				Location = location;
-				Name = name;
 				DefaultValue = defaultValue;
+				Name = name;
 			}
 
 			public FieldInfo Location { get; }
-			public bool DefaultValue { get; }
-			public string Name { get;}
-			public string LongName => "--" + Name;
-		}
-		public class IntegerArgument
-		{
-			public IntegerArgument(FieldInfo location, string name)
-			{
-				Location = location;
-				Name = name;
-			}
-			public FieldInfo Location { get; }
+			public object? DefaultValue { get; }
 			public string Name { get; }
-			public string LongName => "--" + Name;
+
+			public abstract ErrorOr<(int Count, object Value)> Parse(IEnumerable<string> args);
 		}
-	
-		public ImmutableArray<Option> Options { get; }
-		public ImmutableArray<IntegerArgument> IntegerArguments { get; }
+		public class Option : AbstractArgument
+		{
+			public Option(FieldInfo location, string name, bool defaultValue) :
+				base(location, defaultValue, name)
+			{
+			}
+
+			public override ErrorOr<(int Count, object Value)> Parse(IEnumerable<string> args)
+				=> ErrorOr.FromValue((0, (object)!(bool)DefaultValue));
+		}
+		public class IntegerArgument : AbstractArgument
+		{
+			public IntegerArgument(FieldInfo location, string name) :
+				base(location, null, name)
+			{
+			}
+			public override ErrorOr<(int Count, object Value)> Parse(IEnumerable<string> args)
+			{
+				var arg = args.FirstOrDefault();
+				if(!int.TryParse(arg, out int value))
+					return $"Missing the value for '{arg}'.";
+				return ErrorOr.FromValue((1, (object)value));
+			}
+		}
+
+		public ImmutableArray<AbstractArgument> Arguments { get; }
 		
 		public static CommandLineConfiguration Create(Type t)
 		{
 			// 1) Scan public writable values of t.
 			var fields = t.GetFields(BindingFlags.Public | BindingFlags.Instance);
-			List<Option> options = new List<Option>();
-			List<IntegerArgument> intArgs = new List<IntegerArgument>();
+			var arguments = new List<AbstractArgument>();
 			foreach (var field in fields)
 			{
 				if (field.FieldType == typeof(bool))
 				{
 					var name = field.Name;
 					var defaultValue = field.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue ?? false;
-					options.Add(new Option(field, name, defaultValue));
+					arguments.Add(new Option(field, name, defaultValue));
 				}
 				else if (field.FieldType == typeof(int))
 				{
 					var name = field.Name;
-					intArgs.Add(new IntegerArgument(field, name));
+					arguments.Add(new IntegerArgument(field, name));
 				}
 			}
 
-			return new CommandLineConfiguration(options.ToImmutableArray(), intArgs.ToImmutableArray());
+			return new CommandLineConfiguration(arguments.ToImmutableArray());
 		}
 
 		public ErrorOr<T> Parse<T>(string[] args)
 		{
-			Dictionary<Option, bool> values = new Dictionary<Option, bool>();
-			Dictionary<IntegerArgument, int> intValues = new Dictionary<IntegerArgument, int>();
+			Dictionary<AbstractArgument, object> values = new Dictionary<AbstractArgument, object>();
 			for(int i =0; i< args.Length; ++i)
 			{
 				var arg = args[i];
-				var matchedOption = Options.Where(b => b.LongName == arg).FirstOrDefault();
-				if (matchedOption != null)
+				var matchedArg = Arguments.Where(b => "--" + b.Name == arg).FirstOrDefault();
+				if (matchedArg != null)
 				{
-					if (!values.TryAdd(matchedOption, !matchedOption.DefaultValue))
+					var parseResult = matchedArg.Parse(args.Skip(i + 1));
+					if (parseResult.MaybeError is string error)
+						return error;
+					var (count, value) = parseResult.Value;
+					if(!values.TryAdd(matchedArg, value))
 						return $"Duplicate option '{arg}'.";
-					continue;
-				}
-				var matchedIntArg = IntegerArguments.Where(b => b.LongName == arg).FirstOrDefault();
-				if (matchedIntArg != null)
-				{
-					var valueArg = i + 1 < args.Length ? args[i + 1] : null;
-					if (!int.TryParse(valueArg, out int value))
-						return $"Missing the value for '{arg}'.";
-					if (!intValues.TryAdd(matchedIntArg, value))
-						return $"Duplicate option '{arg}'.";
-					++i;
-					continue;
+					i += count;
 				}
 				else
 				{
 					return $"Unknown option '{arg}'.";
 				}
 			}
-			foreach (var arg in Options)
+			foreach (var arg in Arguments)
 			{
 				if (!values.ContainsKey(arg))
-					values.Add(arg, arg.DefaultValue);
-			}
-			foreach (var arg in IntegerArguments)
-			{
-				if(!intValues.ContainsKey(arg))
-					return $"Missing mandatory argument '{arg.LongName}'.";
+				{
+					if (arg.DefaultValue is object defaultValue)
+						values.Add(arg, defaultValue);
+					else
+						return $"Missing mandatory argument '--{arg.Name}'.";
+				}
 			}
 
 			var result = (T)Activator.CreateInstance(typeof(T));
-			foreach(var opt in Options)
-				opt.Location.SetValue(result, values[opt]);
-			foreach(var arg in IntegerArguments)
-				arg.Location.SetValue(result, intValues[arg]);
+			foreach(var arg in Arguments)
+				arg.Location.SetValue(result, values[arg]);
 			return ErrorOr.FromValue(result);
 		}
 	}
