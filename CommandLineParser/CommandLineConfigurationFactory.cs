@@ -8,6 +8,14 @@ namespace CmdParse
 {
 	public class CommandLineConfigurationFactory
 	{
+		private static readonly Dictionary<Type, Func<string, ErrorOr<object?>>> UnaryConverters = new Dictionary<Type, Func<string, ErrorOr<object?>>>()
+		{
+			[typeof(bool)] = Converters.TryParseBool,
+			[typeof(int)] = Converters.TryParseInt,
+			[typeof(double)] = Converters.TryParseDouble,
+			[typeof(string)] = Converters.TryParseString,
+		};
+
 		private class WrittableMember
 		{
 			public MemberInfo Member { get; }
@@ -23,10 +31,11 @@ namespace CmdParse
 				Type = type;
 			}
 		}
+
 		private IEnumerable<WrittableMember> GetWrittableMembers(Type t)
 		{
 			foreach (var field in t.GetFields(BindingFlags.Public | BindingFlags.Instance))
-				if(!field.IsInitOnly)
+				if (!field.IsInitOnly)
 					yield return new WrittableMember(field, field.SetValue, field.FieldType);
 			foreach (var prop in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
 				if (prop.CanWrite)
@@ -61,7 +70,7 @@ namespace CmdParse
 
 			return argumentLookup.ToImmutableDictionary();
 		}
-
+		
 		private AbstractArgument CreateArgument(WrittableMember memberInfo)
 		{
 			var nameAttribute = memberInfo.GetCustomAttribute<CmdNameAttribute>();
@@ -71,46 +80,23 @@ namespace CmdParse
 			var defaultValue = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
 			if (defaultValue != null && !memberInfo.Type.IsInstanceOfType(defaultValue))
 				throw new ArgumentException("Wrong default type");
-			var (elemType, arity) = HandleEnumerable(memberInfo);
 
-			if (elemType == typeof(bool) && arity == Arity.OneOrZero)
-			{
+			if (memberInfo.Type == typeof(bool))
 				return new Option(name, shortName, defaultValue ?? false);
-			}
-			else if (elemType == typeof(bool))
-			{
-				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, str => bool.TryParse(str, out var val)
-					? ErrorOr.FromValue<object?>(val)
-					: "Invalid boolean");
-			}
-			else if (elemType == typeof(int))
-			{
-				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, str => int.TryParse(str, out var val)
-					? ErrorOr.FromValue<object?>(val)
-					: "Invalid integer");
-			}
-			else if (elemType == typeof(double))
-			{
-				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, str => double.TryParse(str, out var val)
-					? ErrorOr.FromValue<object?>(val)
-					: "Invalid double");
-			}
-			else if (elemType == typeof(string))
-			{
-				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, ErrorOr.FromValue<object?>);
-			}
+
+			var (elemType, arity) = FlattenEnumerable(memberInfo.Type);
+			if (UnaryConverters.TryGetValue(elemType, out var converter))
+				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, converter);
 			else
-			{
 				throw new ArgumentException($"Unsupported type {elemType}.");
-			}
 		}
 
-		private (Type elemType, Arity arity) HandleEnumerable(WrittableMember memberInfo)
+		private (Type elemType, Arity arity) FlattenEnumerable(Type type)
 		{
-			if (memberInfo.Type.IsGenericType && memberInfo.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-				return (memberInfo.Type.GetGenericArguments().Single(), Arity.ZeroOrMany);
+			if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+				return (type.GetGenericArguments().Single(), Arity.ZeroOrMany);
 			else
-				return (memberInfo.Type, Arity.OneOrZero);
+				return (type, Arity.OneOrZero);
 		}
 	}
 }
