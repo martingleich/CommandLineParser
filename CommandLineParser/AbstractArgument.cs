@@ -27,5 +27,15 @@ namespace CmdParse
 		{
 			return (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(new[] { ResultType }));
 		}
+
+		public override string ToString()
+		{
+			var result = $"{Name} : {ResultType.Name}";
+			if(Arity == Arity.ZeroOrMany)
+				result += "[]";
+			if (DefaultValue != null)
+				result += " = " + DefaultValue.ToString();
+			return result;
+		}
 	}
 }
