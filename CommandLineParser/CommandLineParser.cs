@@ -10,7 +10,8 @@ namespace CmdParse
 				error: error => throw new InvalidOperationException(error));
 		public static ErrorOr<T> ParseWithError<T>(string[] args)
 		{
-			var config = CommandLineConfiguration.Create(typeof(T));
+			var factory = new CommandLineConfigurationFactory();
+			var config = factory.Create(typeof(T));
 			return config.Parse<T>(args);
 		}
 	}
