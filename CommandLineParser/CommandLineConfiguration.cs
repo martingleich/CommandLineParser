@@ -9,12 +9,13 @@ namespace CmdParse
 {
 	public class CommandLineConfiguration
 	{
-		public CommandLineConfiguration(ImmutableArray<AbstractArgument> arguments)
+		public CommandLineConfiguration(ImmutableDictionary<string, AbstractArgument> argumentLookup)
 		{
-			Arguments = arguments;
+			ArgumentLookup = argumentLookup;
 		}
 
-		public ImmutableArray<AbstractArgument> Arguments { get; }
+		public ImmutableDictionary<string, AbstractArgument> ArgumentLookup { get; }
+		public IEnumerable<AbstractArgument> Arguments => ArgumentLookup.Values;
 
 		public static CommandLineConfiguration Create(Type t)
 		{
@@ -64,7 +65,8 @@ namespace CmdParse
 				}
 			}
 
-			return new CommandLineConfiguration(arguments.ToImmutableArray());
+			var argumentLookup = arguments.ToImmutableDictionary(a => a.Name);
+			return new CommandLineConfiguration(argumentLookup);
 		}
 
 		public ErrorOr<T> Parse<T>(string[] args)
