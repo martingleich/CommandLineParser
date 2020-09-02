@@ -23,11 +23,6 @@ namespace CmdParse
 
 		public abstract ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args);
 
-		public IList CreateList()
-		{
-			return (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(new[] { ResultType }));
-		}
-
 		public override string ToString()
 		{
 			var result = $"{Name} : {ResultType.Name}";

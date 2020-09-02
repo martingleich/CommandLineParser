@@ -6,7 +6,6 @@ using System.Linq;
 
 namespace CmdParse
 {
-
 	public class CommandLineConfiguration
 	{
 		public CommandLineConfiguration(
@@ -17,15 +16,20 @@ namespace CmdParse
 			ArgumentLookup = argumentLookup;
 		}
 
-		public Func<IDictionary<AbstractArgument, object?>, object> ResultFactory { get; }
-		public ImmutableDictionary<string, AbstractArgument> ArgumentLookup { get; }
+		private Func<IDictionary<AbstractArgument, object?>, object> ResultFactory { get; }
+		private ImmutableDictionary<string, AbstractArgument> ArgumentLookup { get; }
 		public IEnumerable<AbstractArgument> Arguments => ArgumentLookup.Values;
 
-		public AbstractArgument? FindArgument(string arg)
+		private AbstractArgument? FindArgument(string arg)
 		{
 			ArgumentLookup.TryGetValue(arg, out var matchedArg);
 			return matchedArg;
 		}
+		private static IList CreateList(Type type)
+		{
+			return (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(new[] { type }));
+		}
+
 		public ErrorOr<T> Parse<T>(string[] args)
 		{
 			var values = new Dictionary<AbstractArgument, object?>();
@@ -42,7 +46,7 @@ namespace CmdParse
 					{
 						if (!values.TryGetValue(matchedArg, out object? list) || list == null)
 						{
-							list = matchedArg.CreateList();
+							list = CreateList(matchedArg.ResultType);
 							values.Add(matchedArg, list);
 						}
 						((IList)list).Add(value);
@@ -63,7 +67,7 @@ namespace CmdParse
 					if (arg.DefaultValue is object defaultValue)
 						values.Add(arg, defaultValue);
 					else if (arg.Arity == Arity.ZeroOrMany)
-						values.Add(arg, arg.CreateList());
+						values.Add(arg, CreateList(arg.ResultType));
 					else
 						return $"Missing mandatory argument '--{arg.Name}'.";
 				}
