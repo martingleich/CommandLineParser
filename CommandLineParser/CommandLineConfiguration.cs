@@ -19,11 +19,18 @@ namespace CmdParse
 		private Func<IDictionary<AbstractArgument, object?>, object> ResultFactory { get; }
 		private ImmutableDictionary<string, AbstractArgument> ArgumentLookup { get; }
 		public IEnumerable<AbstractArgument> Arguments => ArgumentLookup.Values;
+		public IEnumerable<AbstractArgument> FreeArguments => Arguments.Where(arg => arg.IsFree).OrderBy(arg => arg.FreeIndex);
 
-		private AbstractArgument? FindArgument(string arg)
+		private AbstractArgument? FindArgument(string arg, ICollection<AbstractArgument> readArguments, out int argLength)
 		{
 			ArgumentLookup.TryGetValue(arg, out var matchedArg);
-			return matchedArg;
+			if (matchedArg != null)
+			{
+				argLength = 1;
+				return matchedArg;
+			}
+			argLength = 0;
+			return FreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.Arity == Arity.ZeroOrMany);
 		}
 		private static IList CreateList(Type type)
 			=> (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(new[] { type })).ThrowIfNull();
@@ -34,9 +41,9 @@ namespace CmdParse
 			for (int i = 0; i < args.Length; ++i)
 			{
 				var arg = args[i];
-				if (FindArgument(arg) is AbstractArgument matchedArg)
+				if (FindArgument(arg, values.Keys, out var argLength) is AbstractArgument matchedArg)
 				{
-					var parseResult = matchedArg.Parse(args.Skip(i + 1));
+					var parseResult = matchedArg.Parse(args.Skip(i + argLength));
 					if (parseResult.MaybeError is string error)
 						return error;
 					var (count, value) = parseResult.Value;
@@ -51,7 +58,7 @@ namespace CmdParse
 					}
 					else if (!values.TryAdd(matchedArg, value))
 						return $"Duplicate option '{arg}'.";
-					i += count;
+					i += count - 1 + argLength;
 				}
 				else
 				{

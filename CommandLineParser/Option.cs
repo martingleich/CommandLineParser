@@ -5,7 +5,7 @@ namespace CmdParse
 	public class Option : AbstractArgument
 	{
 		public Option(string name, string? shortName, object? defaultValue) :
-			base(defaultValue, name, shortName, Arity.OneOrZero, typeof(bool))
+			base(defaultValue, name, shortName, null, Arity.OneOrZero, typeof(bool))
 		{
 		}
 

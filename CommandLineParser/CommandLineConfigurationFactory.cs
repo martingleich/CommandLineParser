@@ -49,6 +49,7 @@ namespace CmdParse
 		{
 			var settableMembers = GetWrittableMembers(t);
 			var arguments = settableMembers.ToImmutableDictionary(f => f, CreateArgument);
+			CheckArguments(arguments);
 
 			var argumentLookup = CreateLookupTable(arguments.Values);
 			object Factory(IDictionary<AbstractArgument, object?> values)
@@ -59,6 +60,28 @@ namespace CmdParse
 				return result;
 			}
 			return new CommandLineConfiguration(argumentLookup, Factory);
+		}
+
+		private void CheckArguments(ImmutableDictionary<WrittableMember, AbstractArgument> arguments)
+		{
+			// Check unique ordering of free arguments
+			var usedIndices = new HashSet<int>();
+			AbstractArgument? longArg = null;
+			var lastIndex = int.MinValue;
+			foreach (var freeArg in arguments.Values.Where(arg => arg.IsFree))
+			{
+				if (!usedIndices.Add(freeArg.FreeIndex!.Value))
+					throw new ArgumentException($"Free index {freeArg.FreeIndex!.Value} was used multiple times.");
+				if (freeArg.Arity == Arity.ZeroOrMany)
+				{
+					if(longArg != null)
+						throw new ArgumentException($"Multiple free enumerables.");
+					longArg = freeArg;
+				}
+				lastIndex = Math.Max(lastIndex, freeArg.FreeIndex!.Value);
+			}
+			if (longArg != null && lastIndex != longArg.FreeIndex.Value)
+				throw new ArgumentException($"The enumerable free argument must be the last free argument.");
 		}
 
 		private ImmutableDictionary<string, AbstractArgument> CreateLookupTable(IEnumerable<AbstractArgument> arguments)
@@ -84,12 +107,14 @@ namespace CmdParse
 			if (defaultValue != null && !memberInfo.Type.IsInstanceOfType(defaultValue))
 				throw new ArgumentException("Wrong default type");
 
+			int? freeIndex = memberInfo.GetCustomAttribute<CmdFreeAttribute>()?.Index;
+
 			if (memberInfo.Type == typeof(bool))
 				return new Option(name, shortName, defaultValue ?? false);
 
 			var (elemType, arity) = FlattenEnumerable(memberInfo.Type);
 			if (UnaryConverters.TryGetValue(elemType, out var converter))
-				return new UnaryArgument(name, shortName, defaultValue, arity, elemType, converter);
+				return new UnaryArgument(defaultValue, name, shortName, freeIndex, arity, elemType, converter);
 			else
 				throw new ArgumentException($"Unsupported type {elemType}.");
 		}
