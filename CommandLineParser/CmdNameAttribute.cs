@@ -2,7 +2,9 @@
 
 namespace CmdParse
 {
-	public class CmdNameAttribute : Attribute
+
+	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+	public sealed class CmdNameAttribute : Attribute
 	{
 		public CmdNameAttribute(string name)
 		{
