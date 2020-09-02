@@ -53,7 +53,7 @@ namespace CmdParse
 			var argumentLookup = CreateLookupTable(arguments.Values);
 			object Factory(IDictionary<AbstractArgument, object?> values)
 			{
-				var result = Activator.CreateInstance(t);
+				var result = Activator.CreateInstance(t).ThrowIfNull();
 				foreach (var arg in arguments)
 					arg.Key.Write(result, values[arg.Value]);
 				return result;

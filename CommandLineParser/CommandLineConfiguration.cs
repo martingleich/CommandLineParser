@@ -26,9 +26,7 @@ namespace CmdParse
 			return matchedArg;
 		}
 		private static IList CreateList(Type type)
-		{
-			return (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(new[] { type }));
-		}
+			=> (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(new[] { type })).ThrowIfNull();
 
 		public ErrorOr<T> Parse<T>(string[] args)
 		{
