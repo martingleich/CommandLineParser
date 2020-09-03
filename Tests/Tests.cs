@@ -46,7 +46,7 @@ namespace Tests
 			public KeyValuePair<float, float> UnsupportedType;
 		}
 		[Fact]
-		public void UnsupportedTypeError()
+		public void UnsupWrongtypeportedTypeError()
 		{
 			Assert.Throws<ArgumentException>(() => CommandLineParser.Parse<UnsupportedTypeErrorType>(new string[0]));
 		}
@@ -61,39 +61,6 @@ namespace Tests
 			var config = new CommandLineConfigurationFactory().Create(typeof(PropertyType));
 			Assert.Contains("Value", config.Arguments.Select(a => a.Name));
 			Assert.DoesNotContain("IgnoredValue", config.Arguments.Select(a => a.Name));
-		}
-	}
-
-	public class OptionalTest
-	{
-		class OptionalReferenceType
-		{
-			[CmdOptionDefault(null)]
-			public string? Value;
-		}
-		[Fact]
-		public void OptionalReference_Avaiable()
-		{
-			var result = CommandLineParser.Parse<OptionalReferenceType>(new[] { "--Value", "Hello" });
-			Assert.Equal("Hello", result.Value);
-		}
-		[Fact]
-		public void OptionalReferenceMissing()
-		{
-			var result = CommandLineParser.Parse<OptionalReferenceType>(new string[0]);
-			Assert.Null(result.Value);
-		}
-
-		class OptionalError_NonOptionalType
-		{
-			[CmdOptionDefault(null)]
-			public int Value;
-		}
-
-		[Fact]
-		public void OptionalError_NonOptional()
-		{
-			Assert.Throws<ArgumentException>(() => CommandLineParser.Parse<OptionalError_NonOptionalType>(new string[0]));
 		}
 	}
 }
