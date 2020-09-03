@@ -5,11 +5,11 @@ namespace CmdParse
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
 	public sealed class CmdOptionDefaultAttribute : Attribute
 	{
-		public CmdOptionDefaultAttribute(object defaultValue)
+		public CmdOptionDefaultAttribute(object? defaultValue)
 		{
 			DefaultValue = defaultValue;
 		}
 
-		public object DefaultValue { get; }
+		public object? DefaultValue { get; }
 	}
 }

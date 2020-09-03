@@ -96,25 +96,40 @@ namespace CmdParse
 
 			return argumentLookup.ToImmutableDictionary();
 		}
-		
+
 		private AbstractArgument CreateArgument(WrittableMember memberInfo)
 		{
 			var nameAttribute = memberInfo.GetCustomAttribute<CmdNameAttribute>();
 			var name = nameAttribute?.Name ?? memberInfo.Name;
 			var shortName = nameAttribute?.ShortName;
 
-			var defaultValue = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>()?.DefaultValue;
-			if (defaultValue != null && !memberInfo.Type.IsInstanceOfType(defaultValue))
-				throw new ArgumentException("Wrong default type");
+			var defaultAttribute = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>();
+			bool isOptional;
+			object? defaultValue;
+			if (defaultAttribute != null)
+			{
+				isOptional = true;
+				defaultValue = defaultAttribute?.DefaultValue;
+				if (defaultValue != null && !memberInfo.Type.IsInstanceOfType(defaultValue))
+					throw new ArgumentException("Wrong default type");
+			}
+			else
+			{
+				isOptional = false;
+				defaultValue = null;
+			}
 
 			int? freeIndex = memberInfo.GetCustomAttribute<CmdFreeAttribute>()?.Index;
 
 			if (memberInfo.Type == typeof(bool))
-				return new Option(name, shortName, defaultValue ?? false);
+			{
+				if(!isOptional || (isOptional && defaultValue != null))
+					return new Option(name, shortName, defaultValue ?? false);
+			}
 
 			var (elemType, arity) = FlattenEnumerable(memberInfo.Type);
 			if (UnaryConverters.TryGetValue(elemType, out var converter))
-				return new UnaryArgument(defaultValue, name, shortName, freeIndex, arity, elemType, converter);
+				return new UnaryArgument(isOptional, defaultValue, name, shortName, freeIndex, arity, elemType, converter);
 			else
 				throw new ArgumentException($"Unsupported type {elemType}.");
 		}

@@ -5,8 +5,9 @@ namespace CmdParse
 {
 	public abstract class AbstractArgument
 	{
-		protected AbstractArgument(object? defaultValue, string name, string? shortName, int? freeIndex, Arity arity, Type resultType)
+		protected AbstractArgument(bool isOptional, object? defaultValue, string name, string? shortName, int? freeIndex, Arity arity, Type resultType)
 		{
+			IsOptional = isOptional;
 			DefaultValue = defaultValue;
 			Name = name;
 			ShortName = shortName;
@@ -15,6 +16,7 @@ namespace CmdParse
 			ResultType = resultType;
 		}
 
+		public bool IsOptional { get; }
 		public object? DefaultValue { get; }
 		public string Name { get; }
 		public string? ShortName { get; }
@@ -30,8 +32,8 @@ namespace CmdParse
 			var result = $"{Name} : {ResultType.Name}";
 			if(Arity == Arity.ZeroOrMany)
 				result += "[]";
-			if (DefaultValue != null)
-				result += " = " + DefaultValue.ToString();
+			if (IsOptional)
+				result += " = " + DefaultValue?.ToString();
 			return result;
 		}
 	}

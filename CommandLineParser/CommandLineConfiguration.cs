@@ -69,8 +69,8 @@ namespace CmdParse
 			{
 				if (!values.ContainsKey(arg))
 				{
-					if (arg.DefaultValue is object defaultValue)
-						values.Add(arg, defaultValue);
+					if (arg.IsOptional)
+						values.Add(arg, arg.DefaultValue);
 					else if (arg.Arity == Arity.ZeroOrMany)
 						values.Add(arg, CreateList(arg.ResultType));
 					else

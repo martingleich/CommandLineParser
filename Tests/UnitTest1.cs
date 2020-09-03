@@ -63,4 +63,25 @@ namespace Tests
 			Assert.DoesNotContain("IgnoredValue", config.Arguments.Select(a => a.Name));
 		}
 	}
+
+	public class OptionalTest
+	{
+		class OptionalReferenceType
+		{
+			[CmdOptionDefault(null)]
+			public string? Value;
+		}
+		[Fact]
+		public void OptionalReference_Avaiable()
+		{
+			var result = CommandLineParser.Parse<OptionalReferenceType>(new[] { "--Value", "Hello" });
+			Assert.Equal("Hello", result.Value);
+		}
+		[Fact]
+		public void OptionalReferenceMissing()
+		{
+			var result = CommandLineParser.Parse<OptionalReferenceType>(new string[0]);
+			Assert.Null(result.Value);
+		}
+	}
 }
