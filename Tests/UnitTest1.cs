@@ -83,5 +83,17 @@ namespace Tests
 			var result = CommandLineParser.Parse<OptionalReferenceType>(new string[0]);
 			Assert.Null(result.Value);
 		}
+
+		class OptionalError_NonOptionalType
+		{
+			[CmdOptionDefault(null)]
+			public int Value;
+		}
+
+		[Fact]
+		public void OptionalError_NonOptional()
+		{
+			Assert.Throws<ArgumentException>(() => CommandLineParser.Parse<OptionalError_NonOptionalType>(new string[0]));
+		}
 	}
 }

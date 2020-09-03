@@ -110,8 +110,10 @@ namespace CmdParse
 			{
 				isOptional = true;
 				defaultValue = defaultAttribute?.DefaultValue;
+				if(defaultValue == null && memberInfo.Type.IsValueType)
+					throw new ArgumentException($"Cannot use null default value for value type '{memberInfo.Type}'.");
 				if (defaultValue != null && !memberInfo.Type.IsInstanceOfType(defaultValue))
-					throw new ArgumentException("Wrong default type");
+					throw new ArgumentException($"Wrong default value '{defaultValue}' for type '{memberInfo.Type}'");
 			}
 			else
 			{
