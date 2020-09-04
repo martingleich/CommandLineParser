@@ -12,7 +12,7 @@ namespace Tests
 			public string? Value;
 		}
 		[Fact]
-		public void OptionalReference_Avaiable()
+		public void OptionalReference_Available()
 		{
 			var result = CommandLineParser.Parse<OptionalReferenceType>(new[] { "--Value", "Hello" });
 			Assert.Equal("Hello", result.Value);
@@ -43,7 +43,7 @@ namespace Tests
 		}
 
 		[Fact]
-		public void OptionalValue_Avaiable()
+		public void OptionalValue_Available()
 		{
 			var result = CommandLineParser.Parse<OptionalNullableValue_Type>(new[] { "--Value", "123" });
 			Assert.Equal(123, result.Value);
@@ -55,5 +55,21 @@ namespace Tests
 			Assert.Null(result.Value);
 		}
 
+		class OptionalNullableValue_WithoutDefault_Type
+		{
+			public int? Value;
+		}
+		[Fact]
+		public void OptionalValueNoDefault_Available()
+		{
+			var result = CommandLineParser.Parse<OptionalNullableValue_WithoutDefault_Type>(new[] { "--Value", "123" });
+			Assert.Equal(123, result.Value);
+		}
+		[Fact]
+		public void OptionalValueNoDefault_Missing()
+		{
+			var result = CommandLineParser.ParseWithError<OptionalNullableValue_WithoutDefault_Type>(new string[0]);
+			Assert.False(result.IsOkay);
+		}
 	}
 } 

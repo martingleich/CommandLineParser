@@ -74,7 +74,7 @@ namespace CmdParse
 					throw new ArgumentException($"Free index {freeArg.FreeIndex!.Value} was used multiple times.");
 				if (freeArg.Arity == Arity.ZeroOrMany)
 				{
-					if(longArg != null)
+					if (longArg != null)
 						throw new ArgumentException($"Multiple free enumerables.");
 					longArg = freeArg;
 				}
@@ -103,7 +103,14 @@ namespace CmdParse
 			var name = nameAttribute?.Name ?? memberInfo.Name;
 			var shortName = nameAttribute?.ShortName;
 
+			bool isNullable = false;
 			var elemType = memberInfo.Type;
+			if (elemType.UnpackSingleGeneric(typeof(Nullable<>)) is Type baseType)
+			{
+				elemType = baseType;
+				isNullable = true;
+			}
+
 			var defaultAttribute = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>();
 			bool isOptional;
 			object? defaultValue;
@@ -111,20 +118,16 @@ namespace CmdParse
 			{
 				isOptional = true;
 				defaultValue = defaultAttribute?.DefaultValue;
-				if (defaultValue == null && elemType.IsValueType)
+				if (defaultValue == null)
 				{
-					if (elemType.IsGenericType && elemType.GetGenericTypeDefinition() == typeof(Nullable<>))
-					{
-						// Nullable is fine.
-						elemType = elemType.GetGenericArguments().Single();
-					}
-					else
-					{
+					if(elemType.IsValueType && !isNullable)
 						throw new ArgumentException($"Cannot use null default value for value type '{elemType}'.");
-					}
 				}
-				if (defaultValue != null && !elemType.IsInstanceOfType(defaultValue))
-					throw new ArgumentException($"Wrong default value '{defaultValue}' for type '{elemType}'");
+				else
+				{
+					if (!elemType.IsInstanceOfType(defaultValue))
+						throw new ArgumentException($"Wrong default value '{defaultValue}' for type '{elemType}'");
+				}
 			}
 			else
 			{
@@ -134,26 +137,26 @@ namespace CmdParse
 
 			int? freeIndex = memberInfo.GetCustomAttribute<CmdFreeAttribute>()?.Index;
 
-			if (elemType == typeof(bool))
+			if (elemType == typeof(bool) && (!isOptional || defaultValue != null))
 			{
-				if(!isOptional || (isOptional && defaultValue != null))
-					return new Option(name, shortName, defaultValue ?? false);
+				return new Option(name, shortName, defaultValue ?? false);
 			}
 
-			var (elemType2, arity) = FlattenEnumerable(elemType);
-			elemType = elemType2;
+			Arity arity;
+			if (elemType.UnpackSingleGeneric(typeof(IEnumerable<>)) is Type elemType2)
+			{
+				elemType = elemType2;
+				arity = Arity.ZeroOrMany;
+			}
+			else
+			{
+				arity = Arity.OneOrZero;
+			}
 			if (UnaryConverters.TryGetValue(elemType, out var converter))
 				return new UnaryArgument(isOptional, defaultValue, name, shortName, freeIndex, arity, elemType, converter);
 			else
 				throw new ArgumentException($"Unsupported type {elemType}.");
 		}
 
-		private (Type elemType, Arity arity) FlattenEnumerable(Type type)
-		{
-			if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-				return (type.GetGenericArguments().Single(), Arity.ZeroOrMany);
-			else
-				return (type, Arity.OneOrZero);
-		}
 	}
 }
