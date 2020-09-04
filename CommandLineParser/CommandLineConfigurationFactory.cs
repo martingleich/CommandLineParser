@@ -103,6 +103,7 @@ namespace CmdParse
 			var name = nameAttribute?.Name ?? memberInfo.Name;
 			var shortName = nameAttribute?.ShortName;
 
+			var elemType = memberInfo.Type;
 			var defaultAttribute = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>();
 			bool isOptional;
 			object? defaultValue;
@@ -110,10 +111,20 @@ namespace CmdParse
 			{
 				isOptional = true;
 				defaultValue = defaultAttribute?.DefaultValue;
-				if(defaultValue == null && memberInfo.Type.IsValueType)
-					throw new ArgumentException($"Cannot use null default value for value type '{memberInfo.Type}'.");
-				if (defaultValue != null && !memberInfo.Type.IsInstanceOfType(defaultValue))
-					throw new ArgumentException($"Wrong default value '{defaultValue}' for type '{memberInfo.Type}'");
+				if (defaultValue == null && elemType.IsValueType)
+				{
+					if (elemType.IsGenericType && elemType.GetGenericTypeDefinition() == typeof(Nullable<>))
+					{
+						// Nullable is fine.
+						elemType = elemType.GetGenericArguments().Single();
+					}
+					else
+					{
+						throw new ArgumentException($"Cannot use null default value for value type '{elemType}'.");
+					}
+				}
+				if (defaultValue != null && !elemType.IsInstanceOfType(defaultValue))
+					throw new ArgumentException($"Wrong default value '{defaultValue}' for type '{elemType}'");
 			}
 			else
 			{
@@ -123,13 +134,14 @@ namespace CmdParse
 
 			int? freeIndex = memberInfo.GetCustomAttribute<CmdFreeAttribute>()?.Index;
 
-			if (memberInfo.Type == typeof(bool))
+			if (elemType == typeof(bool))
 			{
 				if(!isOptional || (isOptional && defaultValue != null))
 					return new Option(name, shortName, defaultValue ?? false);
 			}
 
-			var (elemType, arity) = FlattenEnumerable(memberInfo.Type);
+			var (elemType2, arity) = FlattenEnumerable(elemType);
+			elemType = elemType2;
 			if (UnaryConverters.TryGetValue(elemType, out var converter))
 				return new UnaryArgument(isOptional, defaultValue, name, shortName, freeIndex, arity, elemType, converter);
 			else

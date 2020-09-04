@@ -35,5 +35,25 @@ namespace Tests
 		{
 			Assert.Throws<ArgumentException>(() => CommandLineParser.Parse<OptionalError_NonOptionalType>(new string[0]));
 		}
+
+		class OptionalNullableValue_Type
+		{
+			[CmdOptionDefault(null)]
+			public int? Value;
+		}
+
+		[Fact]
+		public void OptionalValue_Avaiable()
+		{
+			var result = CommandLineParser.Parse<OptionalNullableValue_Type>(new[] { "--Value", "123" });
+			Assert.Equal(123, result.Value);
+		}
+		[Fact]
+		public void OptionalValueMissing()
+		{
+			var result = CommandLineParser.Parse<OptionalNullableValue_Type>(new string[0]);
+			Assert.Null(result.Value);
+		}
+
 	}
-}
+} 
