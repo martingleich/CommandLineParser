@@ -108,24 +108,25 @@ namespace CmdParse
 			Arity arity;
 			UnpackMonads(memberInfo, out isNullable, out elemType, out arity);
 
-			bool isOptional;
-			object? defaultValue;
-			UnpackDefaults(memberInfo, isNullable, elemType, out isOptional, out defaultValue);
+			var optionalSettings = UnpackDefaults(memberInfo, isNullable, elemType);
 
 			int? freeIndex = UnpackFrees(memberInfo);
 
-			return BuildArgument(name, shortName, elemType, arity, isOptional, defaultValue, freeIndex);
+			return BuildArgument(name, shortName, elemType, arity, optionalSettings, freeIndex);
 		}
 
-		private static AbstractArgument BuildArgument(string name, string? shortName, Type elemType, Arity arity, bool isOptional, object? defaultValue, int? freeIndex)
+		private static AbstractArgument BuildArgument(string name, string? shortName, Type elemType, Arity arity, OptionalSettings optionalSettings, int? freeIndex)
 		{
-			if (elemType == typeof(bool) && (!isOptional || defaultValue != null) && arity == Arity.OneOrZero)
+			if (elemType == typeof(bool) && arity == Arity.OneOrZero)
 			{
-				return new Option(name, shortName, defaultValue ?? false);
+				if(!optionalSettings.IsOptional)
+					return new Option(name, shortName, false);
+				if(optionalSettings.GetDefaultValue(out var defaultValue) && defaultValue != null)
+					return new Option(name, shortName, (bool)defaultValue);
 			}
 
 			if (UnaryConverters.TryGetValue(elemType, out var converter))
-				return new UnaryArgument(isOptional, defaultValue, name, shortName, freeIndex, arity, elemType, converter);
+				return new UnaryArgument(optionalSettings, name, shortName, freeIndex, arity, elemType, converter);
 			else
 				throw new ArgumentException($"Unsupported type {elemType}.");
 		}
@@ -135,39 +136,42 @@ namespace CmdParse
 			return memberInfo.GetCustomAttribute<CmdFreeAttribute>()?.Index;
 		}
 
-		private static void UnpackDefaults(WrittableMember memberInfo, bool isNullable, Type elemType, out bool isOptional, out object? defaultValue)
+		private static OptionalSettings UnpackDefaults(WrittableMember memberInfo, bool isNullable, Type elemType)
 		{
 			var defaultAttribute = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>();
 			if (defaultAttribute != null)
 			{
-				isOptional = true;
-				defaultValue = defaultAttribute?.DefaultValue;
+				var defaultValue = defaultAttribute?.DefaultValue;
 				if (defaultValue == null)
 				{
-					if (elemType.IsValueType && !isNullable)
-						throw new ArgumentException($"Cannot use null default value for value type '{elemType}'.");
+					if (!isNullable)
+						throw new ArgumentException($"Cannot use null default value for non nullable type '{elemType}'.");
 				}
 				else
 				{
 					if (!elemType.IsInstanceOfType(defaultValue))
 						throw new ArgumentException($"Wrong default value '{defaultValue}' for type '{elemType}'");
 				}
+
+				return OptionalSettings.Optional(defaultValue);
 			}
 			else
 			{
-				isOptional = false;
-				defaultValue = null;
+				return OptionalSettings.Excepted;
 			}
 		}
 
 		private static void UnpackMonads(WrittableMember memberInfo, out bool isNullable, out Type elemType, out Arity arity)
 		{
-			isNullable = false;
 			elemType = memberInfo.Type;
 			if (elemType.UnpackSingleGeneric(typeof(Nullable<>)) is Type baseType)
 			{
 				elemType = baseType;
 				isNullable = true;
+			}
+			else
+			{
+				isNullable = !elemType.IsValueType;
 			}
 
 			if (elemType.UnpackSingleGeneric(typeof(IEnumerable<>)) is Type elemType2)

@@ -71,5 +71,22 @@ namespace Tests
 			var result = CommandLineParser.ParseWithError<OptionalNullableValue_WithoutDefault_Type>(new string[0]);
 			Assert.False(result.IsOkay);
 		}
+		class OptionalNullableValue_WithDefault_Type
+		{
+			[CmdOptionDefault(456)]
+			public int? Value;
+		}
+		[Fact]
+		public void OptionalValueWithDefault_Available()
+		{
+			var result = CommandLineParser.Parse<OptionalNullableValue_WithDefault_Type>(new[] { "--Value", "123" });
+			Assert.Equal(123, result.Value);
+		}
+		[Fact]
+		public void OptionalValueWithDefault_Missing()
+		{
+			var result = CommandLineParser.Parse<OptionalNullableValue_WithDefault_Type>(new string[0]);
+			Assert.Equal(456, result.Value);
+		}
 	}
 } 

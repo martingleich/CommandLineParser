@@ -4,12 +4,14 @@ namespace CmdParse
 {
 	public class Option : AbstractArgument
 	{
-		public Option(string name, string? shortName, object? defaultValue) :
-			base(true, defaultValue, name, shortName, null, Arity.OneOrZero, typeof(bool))
+		public bool DefaultValue { get; }
+		public Option(string name, string? shortName, bool defaultValue) :
+			base(OptionalSettings.Optional(defaultValue), name, shortName, null, Arity.OneOrZero, typeof(bool))
 		{
+			DefaultValue = defaultValue;
 		}
 
 		public override ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
-			=> ErrorOr.FromValue((0, (object?)!(bool)DefaultValue));
+			=> ErrorOr.FromValue((0, (object?)!DefaultValue));
 	}
 }
