@@ -8,7 +8,7 @@ namespace CmdParse
 {
 	public sealed class CommandLineConfigurationFactory
 	{
-		private static readonly ImmutableDictionary<Type, UnaryArgumentParser> Parsers = new[] {
+		private static readonly ImmutableDictionary<Type, IArgumentParser> Parsers = new IArgumentParser[] {
 				UnaryArgumentParser.Bool,
 				UnaryArgumentParser.Int,
 				UnaryArgumentParser.Double,

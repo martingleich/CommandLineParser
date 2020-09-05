@@ -5,13 +5,24 @@ using System.Linq;
 
 namespace CmdParse
 {
-	public sealed class UnaryArgumentParser : IArgumentParser
+	public static class UnaryArgumentParser
 	{
-		public Type ResultType { get; }
-		public Func<string, ErrorOr<object?>> Parser { get; }
-		public UnaryArgumentParser(Type resultType, Func<string, ErrorOr<object?>> parser)
+		public static UnaryArgumentParser<T> Create<T>(Func<string, ErrorOr<T>> func)
+			=> new UnaryArgumentParser<T>(func);
+		public static UnaryArgumentParser<bool> Bool { get; } = Create(Converters.TryParseBool);
+		public static UnaryArgumentParser<int> Int { get; } = Create(Converters.TryParseInt);
+		public static UnaryArgumentParser<double> Double { get; } = Create(Converters.TryParseDouble);
+		public static UnaryArgumentParser<string> String { get; } = Create(ErrorOr.FromValue);
+		public static UnaryArgumentParser<DirectoryInfo> DirectoryInfo { get; } = Create(str => ErrorOr.Try(() => new DirectoryInfo(str)));
+		public static UnaryArgumentParser<FileInfo> FileInfo { get; } = Create(str => ErrorOr.Try(() => new FileInfo(str)));
+	}
+
+	public sealed class UnaryArgumentParser<T> : IArgumentParser
+	{
+		public Type ResultType => typeof(T);
+		public Func<string, ErrorOr<T>> Parser { get; }
+		public UnaryArgumentParser(Func<string, ErrorOr<T>> parser)
 		{
-			ResultType = resultType;
 			Parser = parser;
 		}
 		public ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
@@ -20,14 +31,7 @@ namespace CmdParse
 			if (args == null)
 				return $"Missing the value for '{arg}'.";
 			else
-				return Parser(arg).Apply(x => (1, x));
+				return Parser(arg).Apply(x => (1, (object?)x));
 		}
-
-		public static UnaryArgumentParser Bool { get; } = new UnaryArgumentParser(typeof(bool), Converters.TryParseBool);
-		public static UnaryArgumentParser Int { get; } = new UnaryArgumentParser(typeof(int), Converters.TryParseInt);
-		public static UnaryArgumentParser Double { get; } = new UnaryArgumentParser(typeof(double), Converters.TryParseDouble);
-		public static UnaryArgumentParser String { get; } = new UnaryArgumentParser(typeof(string), Converters.TryParseString);
-		public static UnaryArgumentParser DirectoryInfo { get; } = new UnaryArgumentParser(typeof(DirectoryInfo), str => ErrorOr.Try<object?>(() => new DirectoryInfo(str)));
-		public static UnaryArgumentParser FileInfo { get; } = new UnaryArgumentParser(typeof(FileInfo), str => ErrorOr.Try<object?>(() => new FileInfo(str)));
 	}
 }
