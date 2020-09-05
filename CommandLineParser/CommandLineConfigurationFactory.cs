@@ -62,25 +62,29 @@ namespace CmdParse
 			return new CommandLineConfiguration(argumentLookup, Factory);
 		}
 
+		private (int FreeIndex, Arity Arity)? TryGetFreeArity(AbstractArgument argument)
+			=> argument.FreeIndex is int idx ? (idx, argument.Arity) : default;
 		private void CheckArguments(ImmutableDictionary<WrittableMember, AbstractArgument> arguments)
 		{
 			// Check unique ordering of free arguments
 			var usedIndices = new HashSet<int>();
-			AbstractArgument? longArg = null;
+			int? firstLongArgIndex = null;
 			var lastIndex = int.MinValue;
-			foreach (var freeArg in arguments.Values.Where(arg => arg.IsFree))
+			foreach (var freeArg in arguments.Values.Select(TryGetFreeArity).WhereNotNull())
 			{
-				if (!usedIndices.Add(freeArg.FreeIndex!.Value))
-					throw new ArgumentException($"Free index {freeArg.FreeIndex!.Value} was used multiple times.");
+				var indexValue = freeArg.FreeIndex;
+				if (!usedIndices.Add(indexValue))
+					throw new ArgumentException($"Free index {indexValue} was used multiple times.");
 				if (freeArg.Arity == Arity.ZeroOrMany)
 				{
-					if (longArg != null)
+					if (firstLongArgIndex != null)
 						throw new ArgumentException($"Multiple free enumerables.");
-					longArg = freeArg;
+					else
+						firstLongArgIndex = indexValue;
 				}
-				lastIndex = Math.Max(lastIndex, freeArg.FreeIndex!.Value);
+				lastIndex = Math.Max(lastIndex, indexValue);
 			}
-			if (longArg != null && lastIndex != longArg.FreeIndex.Value)
+			if (firstLongArgIndex != null && lastIndex != firstLongArgIndex.Value)
 				throw new ArgumentException($"The enumerable free argument must be the last free argument.");
 		}
 

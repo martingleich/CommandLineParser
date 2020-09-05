@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace CmdParse
@@ -13,6 +15,14 @@ namespace CmdParse
 				return type.GetGenericArguments().Single();
 			else
 				return null;
+		}
+		public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T?> values) where T : struct
+		{
+			foreach (var value in values)
+			{
+				if (value.HasValue)
+					yield return value.Value;
+			}
 		}
 	}
 }
