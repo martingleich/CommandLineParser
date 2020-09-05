@@ -103,28 +103,28 @@ namespace CmdParse
 		{
 			var (name, shortName) = UnpackName(memberInfo);
 			UnpackMonads(memberInfo, out var isNullable, out var elemType, out var arity);
-			var optionalSettings = UnpackDefaults(memberInfo, isNullable, elemType);
+			var optionalSettings = UnpackDefaults(memberInfo, isNullable, arity, elemType);
 			int? freeIndex = UnpackFrees(memberInfo);
 			return BuildArgument(name, shortName, elemType, arity, optionalSettings, freeIndex);
 		}
 
 		private static Argument BuildArgument(string name, string? shortName, Type elemType, Arity arity, OptionalSettings optionalSettings, int? freeIndex)
 		{
-			if (elemType == typeof(bool) && arity == Arity.OneOrZero)
+			if (elemType == typeof(bool) && arity == Arity.One)
 			{
 				if (!optionalSettings.IsOptional)
 				{
 					var parser1 = new NullaryArgumentParser<bool>(true);
 					var optionalSettings1 = OptionalSettings.Optional(false);
 					return new Argument(
-						optionalSettings1, name, shortName, null, Arity.OneOrZero, parser1);
+						optionalSettings1, name, shortName, null, Arity.One, parser1);
 				}
 				if (optionalSettings.GetDefaultValue(out var defaultValue) && defaultValue != null)
 				{
 					var parser1 = new NullaryArgumentParser<bool>(!(bool)defaultValue);
 					var optionalSettings1 = OptionalSettings.Optional(!parser1.Value);
 					return new Argument(
-						optionalSettings1, name, shortName, null, Arity.OneOrZero, parser1);
+						optionalSettings1, name, shortName, null, Arity.One, parser1);
 				}
 			}
 
@@ -139,7 +139,7 @@ namespace CmdParse
 			return memberInfo.GetCustomAttribute<CmdFreeAttribute>()?.Index;
 		}
 
-		private static OptionalSettings UnpackDefaults(WrittableMember memberInfo, bool isNullable, Type elemType)
+		private static OptionalSettings UnpackDefaults(WrittableMember memberInfo, bool isNullable, Arity arity, Type elemType)
 		{
 			var defaultAttribute = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>();
 			if (defaultAttribute != null)
@@ -160,7 +160,10 @@ namespace CmdParse
 			}
 			else
 			{
-				return OptionalSettings.Excepted;
+				if (arity == Arity.ZeroOrMany)
+					return OptionalSettings.Optional(Helpers.CreateEmptyEnumerable(elemType));
+				else
+					return OptionalSettings.Excepted;
 			}
 		}
 
@@ -184,7 +187,7 @@ namespace CmdParse
 			}
 			else
 			{
-				arity = Arity.OneOrZero;
+				arity = Arity.One;
 			}
 		}
 

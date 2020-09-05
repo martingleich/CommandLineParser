@@ -32,8 +32,6 @@ namespace CmdParse
 			argLength = 0;
 			return FreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.Arity == Arity.ZeroOrMany);
 		}
-		private static IList CreateList(Type type)
-			=> (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(new[] { type })).ThrowIfNull();
 
 		public ErrorOr<T> Parse<T>(string[] args)
 		{
@@ -47,11 +45,11 @@ namespace CmdParse
 					if (parseResult.MaybeError is string error)
 						return error;
 					var (count, value) = parseResult.Value;
-					if (matchedArg.Arity != Arity.OneOrZero)
+					if (matchedArg.Arity != Arity.One)
 					{
 						if (!values.TryGetValue(matchedArg, out object? list) || list == null)
 						{
-							list = CreateList(matchedArg.ResultType);
+							list = Helpers.CreateList(matchedArg.ResultType);
 							values.Add(matchedArg, list);
 						}
 						((IList)list).Add(value);
@@ -71,8 +69,6 @@ namespace CmdParse
 				{
 					if (arg.OptionalSettings.GetDefaultValue(out var defaultValue))
 						values.Add(arg, defaultValue);
-					else if (arg.Arity == Arity.ZeroOrMany)
-						values.Add(arg, CreateList(arg.ResultType));
 					else
 						return $"Missing mandatory argument '--{arg.Name}'.";
 				}

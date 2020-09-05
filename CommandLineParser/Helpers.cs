@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -23,5 +24,9 @@ namespace CmdParse
 					yield return value.Value;
 			}
 		}
+		public static IList CreateList(Type type)
+			=> (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(new[] { type })).ThrowIfNull();
+		public static IEnumerable CreateEmptyEnumerable(Type type)
+			=> Array.CreateInstance(type, 0);
 	}
 }
