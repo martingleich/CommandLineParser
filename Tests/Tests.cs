@@ -25,7 +25,7 @@ namespace Tests
 		[Fact]
 		public void ReadonlyTest()
 		{
-			var config = new CommandLineConfigurationFactory().Create(typeof(ReadonlyTestType));
+			var config = new CommandLineConfigurationFactory().Create<ReadonlyTestType>();
 			Assert.DoesNotContain("Value", config.Arguments.Select(a => a.Name));
 		}
 
@@ -58,7 +58,7 @@ namespace Tests
 		[Fact]
 		public void Property()
 		{
-			var config = new CommandLineConfigurationFactory().Create(typeof(PropertyType));
+			var config = new CommandLineConfigurationFactory().Create<PropertyType>();
 			Assert.Contains("Value", config.Arguments.Select(a => a.Name));
 			Assert.DoesNotContain("IgnoredValue", config.Arguments.Select(a => a.Name));
 		}

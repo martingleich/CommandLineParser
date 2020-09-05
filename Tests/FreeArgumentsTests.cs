@@ -74,7 +74,7 @@ namespace Tests
 		[Fact]
 		public void FreeArgument_NoOrdering()
 		{
-			Assert.Throws<ArgumentException>(() => new CommandLineConfigurationFactory().Create(typeof(FreeArgument_NoOrdering_Error_Type)));
+			Assert.Throws<ArgumentException>(() => new CommandLineConfigurationFactory().Create<FreeArgument_NoOrdering_Error_Type>());
 		}
 		class FreeArgument_TrailingFreeArity_Type
 		{
@@ -100,7 +100,7 @@ namespace Tests
 		[Fact]
 		public void FreeArgument_LongNonTrailing_Error()
 		{
-			Assert.Throws<ArgumentException>(() => new CommandLineConfigurationFactory().Create(typeof(FreeArgument_LongNonTrailing_Error_Type)));
+			Assert.Throws<ArgumentException>(() => new CommandLineConfigurationFactory().Create<FreeArgument_LongNonTrailing_Error_Type>());
 		}
 		class FreeArgument_ManyLong_Error_Type
 		{
@@ -112,7 +112,7 @@ namespace Tests
 		[Fact]
 		public void FreeArgument_ManyLong_Error()
 		{
-			Assert.Throws<ArgumentException>(() => new CommandLineConfigurationFactory().Create(typeof(FreeArgument_ManyLong_Error_Type)));
+			Assert.Throws<ArgumentException>(() => new CommandLineConfigurationFactory().Create<FreeArgument_ManyLong_Error_Type>());
 		}
 	}
 }

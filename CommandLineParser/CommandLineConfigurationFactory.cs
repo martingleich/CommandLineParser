@@ -43,21 +43,21 @@ namespace CmdParse
 					yield return new WrittableMember(prop, prop.SetValue, prop.PropertyType);
 		}
 
-		public CommandLineConfiguration Create(Type t)
+		public CommandLineConfiguration<T> Create<T>() where T : new()
 		{
-			var settableMembers = GetWrittableMembers(t);
+			var settableMembers = GetWrittableMembers(typeof(T));
 			var arguments = settableMembers.ToImmutableDictionary(f => f, CreateArgument);
 			CheckArguments(arguments);
 
 			var argumentLookup = CreateLookupTable(arguments.Values);
-			object Factory(IDictionary<Argument, object?> values)
+			T Factory(IDictionary<Argument, object?> values)
 			{
-				var result = Activator.CreateInstance(t).ThrowIfNull();
+				var result = new T();
 				foreach (var arg in arguments)
 					arg.Key.Write(result, values[arg.Value]);
 				return result;
 			}
-			return new CommandLineConfiguration(argumentLookup, Factory);
+			return new CommandLineConfiguration<T>(argumentLookup, Factory);
 		}
 
 		private (int FreeIndex, Arity Arity)? TryGetFreeArity(Argument argument)

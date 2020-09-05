@@ -6,17 +6,17 @@ using System.Linq;
 
 namespace CmdParse
 {
-	public sealed class CommandLineConfiguration
+	public sealed class CommandLineConfiguration<T>
 	{
 		public CommandLineConfiguration(
 			ImmutableDictionary<string, Argument> argumentLookup,
-			Func<IDictionary<Argument, object?>, object> resultFactory)
+			Func<IDictionary<Argument, object?>, T> resultFactory)
 		{
 			ResultFactory = resultFactory;
 			ArgumentLookup = argumentLookup;
 		}
 
-		private Func<IDictionary<Argument, object?>, object> ResultFactory { get; }
+		private Func<IDictionary<Argument, object?>, T> ResultFactory { get; }
 		private ImmutableDictionary<string, Argument> ArgumentLookup { get; }
 		public IEnumerable<Argument> Arguments => ArgumentLookup.Values;
 		public IEnumerable<Argument> FreeArguments => Arguments.Where(arg => arg.IsFree).OrderBy(arg => arg.FreeIndex);
@@ -33,7 +33,7 @@ namespace CmdParse
 			return FreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.Arity == Arity.ZeroOrMany);
 		}
 
-		public ErrorOr<T> Parse<T>(string[] args)
+		public ErrorOr<T> Parse(string[] args)
 		{
 			var values = new Dictionary<Argument, object?>();
 			for (int i = 0; i < args.Length; ++i)
@@ -74,7 +74,7 @@ namespace CmdParse
 				}
 			}
 
-			return ErrorOr.FromValue((T)ResultFactory(values));
+			return ErrorOr.FromValue(ResultFactory(values));
 		}
 	}
 }
