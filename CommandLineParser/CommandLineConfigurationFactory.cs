@@ -1,23 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 
 namespace CmdParse
 {
-	public class CommandLineConfigurationFactory
+	public sealed class CommandLineConfigurationFactory
 	{
-		private static readonly Dictionary<Type, Func<string, ErrorOr<object?>>> UnaryConverters = new Dictionary<Type, Func<string, ErrorOr<object?>>>()
-		{
-			[typeof(bool)] = Converters.TryParseBool,
-			[typeof(int)] = Converters.TryParseInt,
-			[typeof(double)] = Converters.TryParseDouble,
-			[typeof(string)] = Converters.TryParseString,
-			[typeof(DirectoryInfo)] = str => ErrorOr.Try<object?>(() => new DirectoryInfo(str)),
-			[typeof(FileInfo)] = str => ErrorOr.Try<object?>(() => new FileInfo(str)),
-		};
+		private static readonly ImmutableDictionary<Type, UnaryArgumentParser> Parsers = new[] {
+				UnaryArgumentParser.Bool,
+				UnaryArgumentParser.Int,
+				UnaryArgumentParser.Double,
+				UnaryArgumentParser.String,
+				UnaryArgumentParser.FileInfo,
+				UnaryArgumentParser.DirectoryInfo,
+			}.ToImmutableDictionary(t => t.ResultType);
 
 		private class WrittableMember
 		{
@@ -52,7 +50,7 @@ namespace CmdParse
 			CheckArguments(arguments);
 
 			var argumentLookup = CreateLookupTable(arguments.Values);
-			object Factory(IDictionary<AbstractArgument, object?> values)
+			object Factory(IDictionary<Argument, object?> values)
 			{
 				var result = Activator.CreateInstance(t).ThrowIfNull();
 				foreach (var arg in arguments)
@@ -62,9 +60,9 @@ namespace CmdParse
 			return new CommandLineConfiguration(argumentLookup, Factory);
 		}
 
-		private (int FreeIndex, Arity Arity)? TryGetFreeArity(AbstractArgument argument)
-			=> argument.FreeIndex is int idx ? (idx, argument.Arity) : default;
-		private void CheckArguments(ImmutableDictionary<WrittableMember, AbstractArgument> arguments)
+		private (int FreeIndex, Arity Arity)? TryGetFreeArity(Argument argument)
+			=> argument.FreeIndex is int idx ? (idx, argument.Arity) : default((int, Arity)?);
+		private void CheckArguments(ImmutableDictionary<WrittableMember, Argument> arguments)
 		{
 			// Check unique ordering of free arguments
 			var usedIndices = new HashSet<int>();
@@ -88,9 +86,9 @@ namespace CmdParse
 				throw new ArgumentException($"The enumerable free argument must be the last free argument.");
 		}
 
-		private ImmutableDictionary<string, AbstractArgument> CreateLookupTable(IEnumerable<AbstractArgument> arguments)
+		private ImmutableDictionary<string, Argument> CreateLookupTable(IEnumerable<Argument> arguments)
 		{
-			var argumentLookup = new Dictionary<string, AbstractArgument>();
+			var argumentLookup = new Dictionary<string, Argument>();
 			foreach (var arg in arguments)
 			{
 				argumentLookup.Add("--" + arg.Name, arg);
@@ -101,36 +99,37 @@ namespace CmdParse
 			return argumentLookup.ToImmutableDictionary();
 		}
 
-		private AbstractArgument CreateArgument(WrittableMember memberInfo)
+		private Argument CreateArgument(WrittableMember memberInfo)
 		{
-			string name;
-			string? shortName;
-			UnpackName(memberInfo, out name, out shortName);
-
-			bool isNullable;
-			Type elemType;
-			Arity arity;
-			UnpackMonads(memberInfo, out isNullable, out elemType, out arity);
-
+			UnpackName(memberInfo, out var name, out var shortName);
+			UnpackMonads(memberInfo, out var isNullable, out var elemType, out var arity);
 			var optionalSettings = UnpackDefaults(memberInfo, isNullable, elemType);
-
 			int? freeIndex = UnpackFrees(memberInfo);
-
 			return BuildArgument(name, shortName, elemType, arity, optionalSettings, freeIndex);
 		}
 
-		private static AbstractArgument BuildArgument(string name, string? shortName, Type elemType, Arity arity, OptionalSettings optionalSettings, int? freeIndex)
+		private static Argument BuildArgument(string name, string? shortName, Type elemType, Arity arity, OptionalSettings optionalSettings, int? freeIndex)
 		{
 			if (elemType == typeof(bool) && arity == Arity.OneOrZero)
 			{
-				if(!optionalSettings.IsOptional)
-					return new Option(name, shortName, false);
-				if(optionalSettings.GetDefaultValue(out var defaultValue) && defaultValue != null)
-					return new Option(name, shortName, (bool)defaultValue);
+				if (!optionalSettings.IsOptional)
+				{
+					var parser1 = new NullaryArgumentParser<bool>(true);
+					var optionalSettings1 = OptionalSettings.Optional(false);
+					return new Argument(
+						optionalSettings1, name, shortName, null, Arity.OneOrZero, parser1);
+				}
+				if (optionalSettings.GetDefaultValue(out var defaultValue) && defaultValue != null)
+				{
+					var parser1 = new NullaryArgumentParser<bool>(!(bool)defaultValue);
+					var optionalSettings1 = OptionalSettings.Optional(!parser1.Value);
+					return new Argument(
+						optionalSettings1, name, shortName, null, Arity.OneOrZero, parser1);
+				}
 			}
 
-			if (UnaryConverters.TryGetValue(elemType, out var converter))
-				return new UnaryArgument(optionalSettings, name, shortName, freeIndex, arity, elemType, converter);
+			if (Parsers.TryGetValue(elemType, out var parser))
+				return new Argument(optionalSettings, name, shortName, freeIndex, arity, parser);
 			else
 				throw new ArgumentException($"Unsupported type {elemType}.");
 		}

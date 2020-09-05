@@ -1,6 +1,6 @@
 ﻿namespace CmdParse
 {
-	public class OptionalSettings
+	public sealed class OptionalSettings
 	{
 		public static readonly OptionalSettings Excepted = new OptionalSettings(false, null);
 		public static OptionalSettings Optional(object? defaultValue)

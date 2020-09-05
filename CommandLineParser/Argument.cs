@@ -3,16 +3,22 @@ using System.Collections.Generic;
 
 namespace CmdParse
 {
-	public abstract class AbstractArgument
+	public sealed class Argument
 	{
-		protected AbstractArgument(OptionalSettings optionalSettings, string name, string? shortName, int? freeIndex, Arity arity, Type resultType)
+		public Argument(
+			OptionalSettings optionalSettings,
+			string name,
+			string? shortName,
+			int? freeIndex,
+			Arity arity,
+			IArgumentParser parser)
 		{
 			OptionalSettings = optionalSettings;
 			Name = name;
 			ShortName = shortName;
 			FreeIndex = freeIndex;
 			Arity = arity;
-			ResultType = resultType;
+			Parser = parser;
 		}
 
 		public OptionalSettings OptionalSettings { get; }
@@ -21,9 +27,10 @@ namespace CmdParse
 		public int? FreeIndex { get; }
 		public bool IsFree => FreeIndex.HasValue;
 		public Arity Arity { get; }
-		public Type ResultType { get; }
+		public Type ResultType => Parser.ResultType;
+		public IArgumentParser Parser { get; }
 
-		public abstract ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args);
+		public ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args) => Parser.Parse(args);
 
 		public override string ToString()
 		{

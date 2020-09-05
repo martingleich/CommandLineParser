@@ -6,22 +6,22 @@ using System.Linq;
 
 namespace CmdParse
 {
-	public class CommandLineConfiguration
+	public sealed class CommandLineConfiguration
 	{
 		public CommandLineConfiguration(
-			ImmutableDictionary<string, AbstractArgument> argumentLookup,
-			Func<IDictionary<AbstractArgument, object?>, object> resultFactory)
+			ImmutableDictionary<string, Argument> argumentLookup,
+			Func<IDictionary<Argument, object?>, object> resultFactory)
 		{
 			ResultFactory = resultFactory;
 			ArgumentLookup = argumentLookup;
 		}
 
-		private Func<IDictionary<AbstractArgument, object?>, object> ResultFactory { get; }
-		private ImmutableDictionary<string, AbstractArgument> ArgumentLookup { get; }
-		public IEnumerable<AbstractArgument> Arguments => ArgumentLookup.Values;
-		public IEnumerable<AbstractArgument> FreeArguments => Arguments.Where(arg => arg.IsFree).OrderBy(arg => arg.FreeIndex);
+		private Func<IDictionary<Argument, object?>, object> ResultFactory { get; }
+		private ImmutableDictionary<string, Argument> ArgumentLookup { get; }
+		public IEnumerable<Argument> Arguments => ArgumentLookup.Values;
+		public IEnumerable<Argument> FreeArguments => Arguments.Where(arg => arg.IsFree).OrderBy(arg => arg.FreeIndex);
 
-		private AbstractArgument? FindArgument(string arg, ICollection<AbstractArgument> readArguments, out int argLength)
+		private Argument? FindArgument(string arg, ICollection<Argument> readArguments, out int argLength)
 		{
 			ArgumentLookup.TryGetValue(arg, out var matchedArg);
 			if (matchedArg != null)
@@ -37,11 +37,11 @@ namespace CmdParse
 
 		public ErrorOr<T> Parse<T>(string[] args)
 		{
-			var values = new Dictionary<AbstractArgument, object?>();
+			var values = new Dictionary<Argument, object?>();
 			for (int i = 0; i < args.Length; ++i)
 			{
 				var arg = args[i];
-				if (FindArgument(arg, values.Keys, out var argLength) is AbstractArgument matchedArg)
+				if (FindArgument(arg, values.Keys, out var argLength) is Argument matchedArg)
 				{
 					var parseResult = matchedArg.Parse(args.Skip(i + argLength));
 					if (parseResult.MaybeError is string error)
