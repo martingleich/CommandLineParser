@@ -101,7 +101,7 @@ namespace CmdParse
 
 		private Argument CreateArgument(WrittableMember memberInfo)
 		{
-			UnpackName(memberInfo, out var name, out var shortName);
+			var (name, shortName) = UnpackName(memberInfo);
 			UnpackMonads(memberInfo, out var isNullable, out var elemType, out var arity);
 			var optionalSettings = UnpackDefaults(memberInfo, isNullable, elemType);
 			int? freeIndex = UnpackFrees(memberInfo);
@@ -188,11 +188,12 @@ namespace CmdParse
 			}
 		}
 
-		private static void UnpackName(WrittableMember memberInfo, out string name, out string? shortName)
+		private static (string name, string? shortName) UnpackName(WrittableMember memberInfo)
 		{
 			var nameAttribute = memberInfo.GetCustomAttribute<CmdNameAttribute>();
-			name = nameAttribute?.Name ?? memberInfo.Name;
-			shortName = nameAttribute?.ShortName;
+			return (
+				 name: nameAttribute?.Name ?? memberInfo.Name,
+				 shortName: nameAttribute?.ShortName);
 		}
 	}
 }
