@@ -45,7 +45,7 @@ namespace CmdParse
 					if (parseResult.MaybeError is string error)
 						return error;
 					var (count, value) = parseResult.Value;
-					if (matchedArg.Arity != Arity.One)
+					if (matchedArg.Arity == Arity.ZeroOrMany)
 					{
 						if (!values.TryGetValue(matchedArg, out object? list) || list == null)
 						{
