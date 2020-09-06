@@ -108,27 +108,33 @@ namespace CmdParse
 			return BuildArgument(name, shortName, elemType, optionalSettings, freeIndex);
 		}
 
-		private static Argument BuildArgument(string name, string? shortName, Type elemType, AritySettings aritySettings, int? freeIndex)
+		private static Argument? TryMapOption(string name, string? shortName, Type elemType, AritySettings aritySettings)
 		{
-			if (elemType == typeof(bool) && (aritySettings.Arity == Arity.One || aritySettings.Arity == Arity.ZeroOrOne))
+			if (elemType != typeof(bool))
+				return null;
+			
+			if (aritySettings.Arity == Arity.One)
 			{
-				if (aritySettings.Arity == Arity.One)
-				{
-					var parser1 = new NullaryArgumentParser<bool>(true);
-					var aritySettings1 = AritySettings.Optional(false);
-					return new Argument(
-						aritySettings1, name, shortName, null, parser1);
-				}
-				if (aritySettings.GetDefaultValue(out var defaultValue) && defaultValue != null)
-				{
-					var parser1 = new NullaryArgumentParser<bool>(!(bool)defaultValue);
-					var aritySettings1 = AritySettings.Optional(!parser1.Value);
-					return new Argument(
-						aritySettings1, name, shortName, null, parser1);
-				}
+				var parser = new NullaryArgumentParser<bool>(true);
+				var aritySettings1 = AritySettings.Optional(false);
+				return new Argument(
+					aritySettings1, name, shortName, null, parser);
+			}
+			if (aritySettings.Arity == Arity.ZeroOrOne && aritySettings.GetDefaultValue(out var defaultValue) && defaultValue != null)
+			{
+				var parser = new NullaryArgumentParser<bool>(!(bool)defaultValue);
+				var aritySettings1 = AritySettings.Optional(!parser.Value);
+				return new Argument(
+					aritySettings1, name, shortName, null, parser);
 			}
 
-			if (Parsers.TryGetValue(elemType, out var parser))
+			return null;
+		}
+		private static Argument BuildArgument(string name, string? shortName, Type elemType, AritySettings aritySettings, int? freeIndex)
+		{
+			if(TryMapOption(name, shortName, elemType, aritySettings) is Argument optionArgument)
+				return optionArgument;
+			else if (Parsers.TryGetValue(elemType, out var parser))
 				return new Argument(aritySettings, name, shortName, freeIndex, parser);
 			else
 				throw new ArgumentException($"Unsupported type {elemType}.");
