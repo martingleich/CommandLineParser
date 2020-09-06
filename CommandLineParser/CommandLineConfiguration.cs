@@ -32,7 +32,7 @@ namespace CmdParse
 			else
 			{
 				argLength = 0;
-				return OrderedFreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.Arity == Arity.ZeroOrMany);
+				return OrderedFreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.AritySettings.Arity == Arity.ZeroOrMany);
 			}
 		}
 
@@ -48,7 +48,7 @@ namespace CmdParse
 					if (parseResult.MaybeError is string error)
 						return error;
 					var (count, value) = parseResult.Value;
-					if (matchedArg.Arity == Arity.ZeroOrMany)
+					if (matchedArg.AritySettings.Arity == Arity.ZeroOrMany)
 					{
 						if (!values.TryGetValue(matchedArg, out object? list) || list == null)
 						{
@@ -70,7 +70,7 @@ namespace CmdParse
 			{
 				if (!values.ContainsKey(arg))
 				{
-					if (arg.OptionalSettings.GetDefaultValue(out var defaultValue))
+					if (arg.AritySettings.GetDefaultValue(out var defaultValue))
 						values.Add(arg, defaultValue);
 					else
 						return $"Missing mandatory argument '--{arg.Name}'.";

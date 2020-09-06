@@ -61,7 +61,7 @@ namespace CmdParse
 		}
 
 		private (int FreeIndex, Arity Arity)? TryGetFreeArity(Argument argument)
-			=> argument.FreeIndex is int idx ? (idx, argument.Arity) : default((int, Arity)?);
+			=> argument.FreeIndex is int idx ? (idx, argument.AritySettings.Arity) : default((int, Arity)?);
 		private void CheckArguments(ImmutableDictionary<WrittableMember, Argument> arguments)
 		{
 			// Check unique ordering of free arguments
@@ -105,31 +105,31 @@ namespace CmdParse
 			UnpackMonads(memberInfo, out var isNullable, out var elemType, out var arity);
 			var optionalSettings = UnpackDefaults(memberInfo, isNullable, arity, elemType);
 			int? freeIndex = UnpackFrees(memberInfo);
-			return BuildArgument(name, shortName, elemType, arity, optionalSettings, freeIndex);
+			return BuildArgument(name, shortName, elemType, optionalSettings, freeIndex);
 		}
 
-		private static Argument BuildArgument(string name, string? shortName, Type elemType, Arity arity, OptionalSettings optionalSettings, int? freeIndex)
+		private static Argument BuildArgument(string name, string? shortName, Type elemType, AritySettings aritySettings, int? freeIndex)
 		{
-			if (elemType == typeof(bool) && arity == Arity.One)
+			if (elemType == typeof(bool) && (aritySettings.Arity == Arity.One || aritySettings.Arity == Arity.ZeroOrOne))
 			{
-				if (!optionalSettings.IsOptional)
+				if (aritySettings.Arity == Arity.One)
 				{
 					var parser1 = new NullaryArgumentParser<bool>(true);
-					var optionalSettings1 = OptionalSettings.Optional(false);
+					var aritySettings1 = AritySettings.Optional(false);
 					return new Argument(
-						optionalSettings1, name, shortName, null, Arity.One, parser1);
+						aritySettings1, name, shortName, null, parser1);
 				}
-				if (optionalSettings.GetDefaultValue(out var defaultValue) && defaultValue != null)
+				if (aritySettings.GetDefaultValue(out var defaultValue) && defaultValue != null)
 				{
 					var parser1 = new NullaryArgumentParser<bool>(!(bool)defaultValue);
-					var optionalSettings1 = OptionalSettings.Optional(!parser1.Value);
+					var aritySettings1 = AritySettings.Optional(!parser1.Value);
 					return new Argument(
-						optionalSettings1, name, shortName, null, Arity.One, parser1);
+						aritySettings1, name, shortName, null, parser1);
 				}
 			}
 
 			if (Parsers.TryGetValue(elemType, out var parser))
-				return new Argument(optionalSettings, name, shortName, freeIndex, arity, parser);
+				return new Argument(aritySettings, name, shortName, freeIndex, parser);
 			else
 				throw new ArgumentException($"Unsupported type {elemType}.");
 		}
@@ -139,7 +139,7 @@ namespace CmdParse
 			return memberInfo.GetCustomAttribute<CmdFreeAttribute>()?.Index;
 		}
 
-		private static OptionalSettings UnpackDefaults(WrittableMember memberInfo, bool isNullable, Arity arity, Type elemType)
+		private static AritySettings UnpackDefaults(WrittableMember memberInfo, bool isNullable, Arity arity, Type elemType)
 		{
 			var defaultAttribute = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>();
 			if (defaultAttribute != null)
@@ -156,14 +156,14 @@ namespace CmdParse
 						throw new ArgumentException($"Wrong default value '{defaultValue}' for type '{elemType}'");
 				}
 
-				return OptionalSettings.Optional(defaultValue);
+				return AritySettings.Optional(defaultValue);
 			}
 			else
 			{
 				if (arity == Arity.ZeroOrMany)
-					return OptionalSettings.Optional(Helpers.CreateEmptyEnumerable(elemType));
+					return AritySettings.Many(Helpers.CreateEmptyEnumerable(elemType));
 				else
-					return OptionalSettings.Excepted;
+					return AritySettings.Expected;
 			}
 		}
 

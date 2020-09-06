@@ -3,6 +3,7 @@
 	public enum Arity
 	{
 		One,
+		ZeroOrOne,
 		ZeroOrMany,
 	}
 }

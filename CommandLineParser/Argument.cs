@@ -6,27 +6,24 @@ namespace CmdParse
 	public sealed class Argument
 	{
 		public Argument(
-			OptionalSettings optionalSettings,
+			AritySettings aritySettings,
 			string name,
 			string? shortName,
 			int? freeIndex,
-			Arity arity,
 			IArgumentParser parser)
 		{
-			OptionalSettings = optionalSettings;
+			AritySettings = aritySettings;
 			Name = name;
 			ShortName = shortName;
 			FreeIndex = freeIndex;
-			Arity = arity;
 			Parser = parser;
 		}
 
-		public OptionalSettings OptionalSettings { get; }
+		public AritySettings AritySettings { get; }
 		public string Name { get; }
 		public string? ShortName { get; }
 		public int? FreeIndex { get; }
 		public bool IsFree => FreeIndex.HasValue;
-		public Arity Arity { get; }
 		public Type ResultType => Parser.ResultType;
 		public IArgumentParser Parser { get; }
 
@@ -35,9 +32,9 @@ namespace CmdParse
 		public override string ToString()
 		{
 			var result = $"{Name} : {ResultType.Name}";
-			if(Arity == Arity.ZeroOrMany)
+			if(AritySettings.Arity == Arity.ZeroOrMany)
 				result += "[]";
-			if (OptionalSettings.GetDefaultValue(out var defaultValue))
+			if (AritySettings.GetDefaultValue(out var defaultValue))
 				result += " = " + defaultValue?.ToString();
 			return result;
 		}
