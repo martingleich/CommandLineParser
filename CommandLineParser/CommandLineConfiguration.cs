@@ -13,24 +13,27 @@ namespace CmdParse
 			Func<IDictionary<Argument, object?>, T> resultFactory)
 		{
 			ResultFactory = resultFactory;
+			OrderedFreeArguments = argumentLookup.Values.Where(arg => arg.IsFree).OrderBy(arg => arg.FreeIndex).ToImmutableArray();
 			ArgumentLookup = argumentLookup;
 		}
 
-		private Func<IDictionary<Argument, object?>, T> ResultFactory { get; }
-		private ImmutableDictionary<string, Argument> ArgumentLookup { get; }
+		public Func<IDictionary<Argument, object?>, T> ResultFactory { get; }
+		public ImmutableDictionary<string, Argument> ArgumentLookup { get; }
+		public ImmutableArray<Argument> OrderedFreeArguments { get; }
 		public IEnumerable<Argument> Arguments => ArgumentLookup.Values;
-		public IEnumerable<Argument> FreeArguments => Arguments.Where(arg => arg.IsFree).OrderBy(arg => arg.FreeIndex);
 
 		private Argument? FindArgument(string arg, ICollection<Argument> readArguments, out int argLength)
 		{
-			ArgumentLookup.TryGetValue(arg, out var matchedArg);
-			if (matchedArg != null)
+			if (ArgumentLookup.TryGetValue(arg, out var matchedArg))
 			{
 				argLength = 1;
 				return matchedArg;
 			}
-			argLength = 0;
-			return FreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.Arity == Arity.ZeroOrMany);
+			else
+			{
+				argLength = 0;
+				return OrderedFreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.Arity == Arity.ZeroOrMany);
+			}
 		}
 
 		public ErrorOr<T> Parse(string[] args)

@@ -49,7 +49,6 @@ namespace CmdParse
 			var arguments = settableMembers.ToImmutableDictionary(f => f, CreateArgument);
 			CheckArguments(arguments);
 
-			var argumentLookup = CreateLookupTable(arguments.Values);
 			T Factory(IDictionary<Argument, object?> values)
 			{
 				var result = new T();
@@ -57,6 +56,7 @@ namespace CmdParse
 					arg.Key.Write(result, values[arg.Value]);
 				return result;
 			}
+			var argumentLookup = CreateLookupTable(arguments.Values);
 			return new CommandLineConfiguration<T>(argumentLookup, Factory);
 		}
 
