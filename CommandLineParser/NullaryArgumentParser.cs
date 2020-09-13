@@ -14,6 +14,8 @@ namespace CmdParse
 
 		public Type ResultType => typeof(T);
 
+		public string HumanReadableSyntaxDescription => "";
+
 		public ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
 			=> ErrorOr.FromValue((0, (object?)Value));
 	}

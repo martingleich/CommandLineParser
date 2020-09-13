@@ -9,17 +9,24 @@ namespace CmdParse
 	public sealed class CommandLineConfiguration<T>
 	{
 		public CommandLineConfiguration(
+			string programName,
+			string? description,
 			ImmutableDictionary<string, Argument> argumentLookup,
 			Func<IDictionary<Argument, object?>, T> resultFactory)
 		{
+			ProgramName = programName;
+			Description = description;
 			ResultFactory = resultFactory;
 			OrderedFreeArguments = argumentLookup.Values.Where(arg => arg.IsFree).OrderBy(arg => arg.FreeIndex).ToImmutableArray();
 			ArgumentLookup = argumentLookup;
 		}
 
+		public string ProgramName { get; }
+		public string? Description { get; }
 		public Func<IDictionary<Argument, object?>, T> ResultFactory { get; }
 		public ImmutableDictionary<string, Argument> ArgumentLookup { get; }
 		public ImmutableArray<Argument> OrderedFreeArguments { get; }
+		public IEnumerable<Argument> OrderedMandatoryArguments => Arguments.Where(arg => arg.AritySettings.IsMandatory).OrderBy(arg => arg.FreeIndex).ThenBy(arg => arg.Name);
 		public IEnumerable<Argument> Arguments => ArgumentLookup.Values;
 
 		private Argument? FindArgument(string arg, ICollection<Argument> readArguments, out int argLength)

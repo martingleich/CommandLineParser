@@ -15,17 +15,18 @@
 		public Arity Arity { get; }
 		private object? Default { get; }
 
+		public bool IsMandatory => Arity == Arity.One;
 		public bool GetDefaultValue(out object? value)
 		{
-			if (Arity == Arity.ZeroOrMany || Arity == Arity.ZeroOrOne)
-			{
-				value = Default;
-				return true;
-			}
-			else
+			if (IsMandatory)
 			{
 				value = default;
 				return false;
+			}
+			else
+			{
+				value = Default;
+				return true;
 			}
 		}
 	}

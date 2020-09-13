@@ -57,7 +57,8 @@ namespace CmdParse
 				return result;
 			}
 			var argumentLookup = CreateLookupTable(arguments.Values);
-			return new CommandLineConfiguration<T>(argumentLookup, Factory);
+			UnpackProgramDescription(typeof(T), out var programName, out var description);
+			return new CommandLineConfiguration<T>(programName, description, argumentLookup, Factory);
 		}
 
 		private (int FreeIndex, Arity Arity)? TryGetFreeArity(Argument argument)
@@ -104,11 +105,12 @@ namespace CmdParse
 			var (name, shortName) = UnpackName(memberInfo);
 			UnpackMonads(memberInfo, out var isNullable, out var elemType, out var arity);
 			var optionalSettings = UnpackDefaults(memberInfo, isNullable, arity, elemType);
-			int? freeIndex = UnpackFrees(memberInfo);
-			return BuildArgument(name, shortName, elemType, optionalSettings, freeIndex);
+			var freeIndex = UnpackFrees(memberInfo);
+			var description = UnpackArgumentDescription(memberInfo);
+			return BuildArgument(name, shortName, elemType, optionalSettings, freeIndex, description);
 		}
 
-		private static Argument? TryMapOption(string name, string? shortName, Type elemType, AritySettings aritySettings)
+		private static Argument? TryMapOption(string name, string? shortName, Type elemType, AritySettings aritySettings, string? description)
 		{
 			if (elemType != typeof(bool))
 				return null;
@@ -117,27 +119,37 @@ namespace CmdParse
 			{
 				var parser = new NullaryArgumentParser<bool>(true);
 				var aritySettings1 = AritySettings.Optional(false);
-				return new Argument(
-					aritySettings1, name, shortName, null, parser);
+				return new Argument(description, aritySettings1, name, shortName, null, parser);
 			}
 			if (aritySettings.Arity == Arity.ZeroOrOne && aritySettings.GetDefaultValue(out var defaultValue) && defaultValue != null)
 			{
 				var parser = new NullaryArgumentParser<bool>(!(bool)defaultValue);
 				var aritySettings1 = AritySettings.Optional(!parser.Value);
-				return new Argument(
-					aritySettings1, name, shortName, null, parser);
+				return new Argument(description, aritySettings1, name, shortName, null, parser);
 			}
 
 			return null;
 		}
-		private static Argument BuildArgument(string name, string? shortName, Type elemType, AritySettings aritySettings, int? freeIndex)
+		private static Argument BuildArgument(string name, string? shortName, Type elemType, AritySettings aritySettings, int? freeIndex, string? description)
 		{
-			if(TryMapOption(name, shortName, elemType, aritySettings) is Argument optionArgument)
+			if(TryMapOption(name, shortName, elemType, aritySettings, description) is Argument optionArgument)
 				return optionArgument;
 			else if (Parsers.TryGetValue(elemType, out var parser))
-				return new Argument(aritySettings, name, shortName, freeIndex, parser);
+				return new Argument(description, aritySettings, name, shortName, freeIndex, parser);
 			else
 				throw new ArgumentException($"Unsupported type {elemType}.");
+		}
+
+		private static void UnpackProgramDescription(Type t, out string programName, out string? description)
+		{
+			var attribute = t.GetCustomAttribute<CmdProgramDescriptionAttribute>();
+			programName = attribute?.Name ?? System.Diagnostics.Process.GetCurrentProcess().ProcessName;
+			description = attribute?.Description;
+		}
+		private static string? UnpackArgumentDescription(WrittableMember m)
+		{
+			var attribute = m.GetCustomAttribute<CmdArgumentDescriptionAttribute>();
+			return attribute?.Description;
 		}
 
 		private static int? UnpackFrees(WrittableMember memberInfo)

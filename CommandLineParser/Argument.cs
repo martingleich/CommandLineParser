@@ -6,18 +6,21 @@ namespace CmdParse
 	public sealed class Argument
 	{
 		public Argument(
+			string? description,
 			AritySettings aritySettings,
 			string name,
 			string? shortName,
 			int? freeIndex,
 			IArgumentParser parser)
 		{
+			Description = description;
 			AritySettings = aritySettings;
 			Name = name;
 			ShortName = shortName;
 			FreeIndex = freeIndex;
 			Parser = parser;
 		}
+		public string? Description { get; }
 
 		public AritySettings AritySettings { get; }
 		public string Name { get; }

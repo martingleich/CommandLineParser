@@ -7,5 +7,6 @@ namespace CmdParse
 	{
 		ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args);
 		Type ResultType { get; }
+		string HumanReadableSyntaxDescription { get; }
 	}
 }
