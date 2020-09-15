@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CmdParse", "CommandLinePars
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{1BB76B86-32C7-4DEC-B1E6-14B1E8509062}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DynamicTests", "DynamicTests\DynamicTests.csproj", "{6B03FCE7-02AE-4255-AD3F-D8479E40D1FF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{1BB76B86-32C7-4DEC-B1E6-14B1E8509062}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1BB76B86-32C7-4DEC-B1E6-14B1E8509062}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1BB76B86-32C7-4DEC-B1E6-14B1E8509062}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B03FCE7-02AE-4255-AD3F-D8479E40D1FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B03FCE7-02AE-4255-AD3F-D8479E40D1FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B03FCE7-02AE-4255-AD3F-D8479E40D1FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B03FCE7-02AE-4255-AD3F-D8479E40D1FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

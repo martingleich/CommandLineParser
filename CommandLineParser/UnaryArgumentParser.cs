@@ -32,8 +32,8 @@ namespace CmdParse
 		public ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
 		{
 			var arg = args.FirstOrDefault();
-			if (args == null)
-				return $"Missing the value for '{arg}'.";
+			if (arg == null)
+				return $"Missing argument value.";
 			else
 				return Parser(arg).Apply(x => (1, (object?)x));
 		}

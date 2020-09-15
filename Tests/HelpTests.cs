@@ -13,6 +13,7 @@ With multiline.")]
 Another line of comments.")]
 			public int myArgument;
 			[CmdArgumentDescription("A option.")]
+			[CmdName("myOption", "o")]
 			public bool myOption;
 		}
 
@@ -26,9 +27,10 @@ With multiline.
 
 MyProgram --myArgument <Int32>
 
+  --help / -h           Show this help page.
   --myArgument : Int32  A argument.
                         Another line of comments.
-  --myOption            A option.", help);
+  --myOption / -o       A option.", help);
 		}
 	}
 }

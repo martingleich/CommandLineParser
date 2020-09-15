@@ -24,6 +24,12 @@ namespace CmdParse
 					yield return value.Value;
 			}
 		}
+		public static IEnumerable<T> Append<T>(this IEnumerable<T> values, T value)
+		{
+			foreach (var v in values)
+				yield return v;
+			yield return value;
+		}
 		public static IList CreateList(Type type)
 			=> (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(new[] { type })).ThrowIfNull();
 		public static IEnumerable CreateEmptyEnumerable(Type type)

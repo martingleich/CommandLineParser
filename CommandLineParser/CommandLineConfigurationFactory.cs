@@ -16,11 +16,13 @@ namespace CmdParse
 				UnaryArgumentParser.FileInfo,
 				UnaryArgumentParser.DirectoryInfo,
 			}.ToImmutableDictionary(t => t.ResultType);
+		public static readonly Argument HelpArgument = new Argument("Show this help page.", AritySettings.Optional(false), "help", "h", null, new NullaryArgumentParser<bool>(false));
 
 		private class WrittableMember
 		{
 			public MemberInfo Member { get; }
-			public Action<object?, object?> Write { get; }
+			public Action<object?, object?> WriteFunc { get; }
+			public void Write(object target, object? value) => WriteFunc(target, value);
 			public Type Type { get; }
 			public string Name => Member.Name;
 			public T? GetCustomAttribute<T>() where T : Attribute => Member.GetCustomAttribute<T>();
@@ -28,7 +30,7 @@ namespace CmdParse
 			public WrittableMember(MemberInfo member, Action<object?, object?> write, Type type)
 			{
 				Member = member;
-				Write = write;
+				WriteFunc = write;
 				Type = type;
 			}
 		}
@@ -46,30 +48,31 @@ namespace CmdParse
 		public CommandLineConfiguration<T> Create<T>() where T : new()
 		{
 			var settableMembers = GetWrittableMembers(typeof(T));
-			var arguments = settableMembers.ToImmutableDictionary(f => f, CreateArgument);
+			var argumentMap = settableMembers.ToImmutableDictionary(f => f, CreateArgument);
+			var arguments = argumentMap.Values.Append(HelpArgument);
 			CheckArguments(arguments);
 
 			T Factory(IDictionary<Argument, object?> values)
 			{
 				var result = new T();
-				foreach (var arg in arguments)
+				foreach (var arg in argumentMap)
 					arg.Key.Write(result, values[arg.Value]);
 				return result;
 			}
-			var argumentLookup = CreateLookupTable(arguments.Values);
+			var argumentLookup = CreateLookupTable(arguments);
 			UnpackProgramDescription(typeof(T), out var programName, out var description);
 			return new CommandLineConfiguration<T>(programName, description, argumentLookup, Factory);
 		}
 
 		private (int FreeIndex, Arity Arity)? TryGetFreeArity(Argument argument)
 			=> argument.FreeIndex is int idx ? (idx, argument.AritySettings.Arity) : default((int, Arity)?);
-		private void CheckArguments(ImmutableDictionary<WrittableMember, Argument> arguments)
+		private void CheckArguments(IEnumerable<Argument> arguments)
 		{
 			// Check unique ordering of free arguments
 			var usedIndices = new HashSet<int>();
 			int? firstLongArgIndex = null;
 			var lastIndex = int.MinValue;
-			foreach (var freeArg in arguments.Values.Select(TryGetFreeArity).WhereNotNull())
+			foreach (var freeArg in arguments.Select(TryGetFreeArity).WhereNotNull())
 			{
 				var indexValue = freeArg.FreeIndex;
 				if (!usedIndices.Add(indexValue))

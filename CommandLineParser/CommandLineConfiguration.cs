@@ -27,7 +27,7 @@ namespace CmdParse
 		public ImmutableDictionary<string, Argument> ArgumentLookup { get; }
 		public ImmutableArray<Argument> OrderedFreeArguments { get; }
 		public IEnumerable<Argument> OrderedMandatoryArguments => Arguments.Where(arg => arg.AritySettings.IsMandatory).OrderBy(arg => arg.FreeIndex).ThenBy(arg => arg.Name);
-		public IEnumerable<Argument> Arguments => ArgumentLookup.Values;
+		public IEnumerable<Argument> Arguments => ArgumentLookup.Values.Distinct();
 
 		private Argument? FindArgument(string arg, ICollection<Argument> readArguments, out int argLength)
 		{
@@ -39,7 +39,10 @@ namespace CmdParse
 			else
 			{
 				argLength = 0;
-				return OrderedFreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.AritySettings.Arity == Arity.ZeroOrMany);
+				if (arg.StartsWith("--") || arg.StartsWith("-"))
+					return null;
+				else
+					return OrderedFreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.AritySettings.Arity == Arity.ZeroOrMany);
 			}
 		}
 
@@ -51,6 +54,8 @@ namespace CmdParse
 				var arg = args[i];
 				if (FindArgument(arg, values.Keys, out var argLength) is Argument matchedArg)
 				{
+					if(matchedArg == CommandLineConfigurationFactory.HelpArgument)
+						return "";
 					var parseResult = matchedArg.Parse(args.Skip(i + argLength));
 					if (parseResult.MaybeError is string error)
 						return error;
@@ -86,5 +91,6 @@ namespace CmdParse
 
 			return ErrorOr.FromValue(ResultFactory(values));
 		}
+		
 	}
 }

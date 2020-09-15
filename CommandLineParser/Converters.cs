@@ -4,12 +4,12 @@
 	{
 		public static ErrorOr<bool> TryParseBool(string value) => bool.TryParse(value, out var val)
 				? ErrorOr.FromValue(val)
-				: "Invalid boolean";
+				: $"Invalid boolean '{value}'";
 		public static ErrorOr<int> TryParseInt(string value) => int.TryParse(value, out var val)
 				? ErrorOr.FromValue(val)
-				: "Invalid integer";
+				: $"Invalid integer '{value}'";
 		public static ErrorOr<double> TryParseDouble(string value) => double.TryParse(value, out var val)
 				? ErrorOr.FromValue(val)
-				: "Invalid double";
+				: $"Invalid double '{value}'";
 	}
 }
