@@ -16,7 +16,7 @@ namespace CmdParse
 
 		public string HumanReadableSyntaxDescription => "";
 
-		public ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
+		public ErrorOr<(int Count, object? Value)> Parse(Argument _, IEnumerable<string> parameters)
 			=> ErrorOr.FromValue((0, (object?)Value));
 	}
 }

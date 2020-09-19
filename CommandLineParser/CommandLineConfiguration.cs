@@ -64,11 +64,11 @@ namespace CmdParse
 				var arg = args[i];
 				if (FindArgument(arg, values.Keys, out var argLength) is Argument matchedArg)
 				{
-					if(matchedArg == CommandLineConfigurationFactory.HelpArgument)
-						return "";
+					if (matchedArg == CommandLineConfigurationFactory.HelpArgument)
+						return ImmutableArray<Error>.Empty;
 					var parseResult = matchedArg.Parse(args.Skip(i + argLength));
-					if (parseResult.MaybeError is string error)
-						return error;
+					if (parseResult.MaybeError is ImmutableArray<Error> errors)
+						return errors;
 					var (count, value) = parseResult.Value;
 					if (matchedArg.AritySettings.IsMany)
 					{
@@ -80,12 +80,12 @@ namespace CmdParse
 						((IList)list).Add(value);
 					}
 					else if (!values.TryAdd(matchedArg, value))
-						return $"Duplicate option '{arg}'.";
+						return new Error(ErrorId.DuplicateArgument, matchedArg.Name);
 					i += count - 1 + argLength;
 				}
 				else
 				{
-					return $"Unknown option '{arg}'.";
+					return new Error(ErrorId.UnknownOption, arg);
 				}
 			}
 			foreach (var arg in Arguments)
@@ -95,7 +95,7 @@ namespace CmdParse
 					if (arg.AritySettings.GetDefaultValue(out var defaultValue))
 						values.Add(arg, defaultValue);
 					else
-						return $"Missing mandatory argument '--{arg.Name}'.";
+						return new Error(ErrorId.MissingMandatoryArgument, arg.Name);
 				}
 			}
 

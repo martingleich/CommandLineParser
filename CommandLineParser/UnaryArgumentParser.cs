@@ -29,13 +29,13 @@ namespace CmdParse
 			Parser = parser;
 			HumanReadableSyntaxDescription = description;
 		}
-		public ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args)
+		public ErrorOr<(int Count, object? Value)> Parse(Argument arg, IEnumerable<string> parameters)
 		{
-			var arg = args.FirstOrDefault();
-			if (arg == null)
-				return $"Missing argument value.";
+			var param = parameters.FirstOrDefault();
+			if (param == null)
+				return new Error(ErrorId.MissingArgumentParameter, arg.Name);
 			else
-				return Parser(arg).Apply(x => (1, (object?)x));
+				return Parser(param).Apply(x => (1, (object?)x));
 		}
 	}
 }

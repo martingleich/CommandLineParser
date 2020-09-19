@@ -32,12 +32,12 @@ namespace CmdParse
 
 		public bool IsOkay => Accept(_ => true, _ => false);
 
-		public static implicit operator ErrorOr<T>(string error) => new Error(ErrorId.GenericError, error);
+		//public static implicit operator ErrorOr<T>(string error) => new Error(ErrorId.GenericError, error);
 		public static implicit operator ErrorOr<T>(Error error) => ImmutableArray.Create(error);
 		public static implicit operator ErrorOr<T>(ImmutableArray<Error> errors) => new ErrorT(errors);
 		public static ErrorOr<T> FromValue(T value) => new ValueT(value);
 
-		public string? MaybeError => Accept<string?>(_ => null, e => string.Join(Environment.NewLine, e));
+		public ImmutableArray<Error>? MaybeError => Accept<ImmutableArray<Error>?>(_ => null, e => e);
 		public T Value => Accept(x => x, e => throw new InvalidOperationException());
 		public ErrorOr<TResult> Apply<TResult>(Func<T, TResult> func) =>
 			Accept(x => ErrorOr.FromValue(func(x)), e => e);
@@ -53,7 +53,7 @@ namespace CmdParse
 			}
 			catch (Exception e)
 			{
-				return e.Message;
+				return new Error(ErrorId.GenericError, e.Message);
 			}
 		}
 	}

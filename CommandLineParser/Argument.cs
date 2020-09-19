@@ -33,7 +33,7 @@ namespace CmdParse
 		public Type ResultType => Parser.ResultType;
 		public IArgumentParser Parser { get; }
 
-		public ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args) => Parser.Parse(args);
+		public ErrorOr<(int Count, object? Value)> Parse(IEnumerable<string> args) => Parser.Parse(this, args);
 
 		public override string ToString()
 		{
