@@ -28,6 +28,31 @@ namespace Tests
 			var result = CommandLineParser.Parse<ManyIntsType>(new[] { "--Value", "1", "--Value", "2", "--Value", "3" });
 			Assert.Equal(new[] { 1, 2, 3 }, result.Value);
 		}
+
+		class OneOrManyIntsType
+		{
+			[CmdAtLeastOne]
+			public IEnumerable<int> Value;
+		}
+		[Fact]
+		public void ParseOneOrManyInts_None()
+		{
+			var result = CommandLineParser.ParseWithError<OneOrManyIntsType>(new string[0]);
+			Assert.False(result.IsOkay);
+		}
+		[Fact]
+		public void ParseOneOrManyInts_Single()
+		{
+			var result = CommandLineParser.Parse<OneOrManyIntsType>(new[] { "--Value", "1" });
+			Assert.Equal(new[] { 1 }, result.Value);
+		}
+		[Fact]
+		public void ParseOneOrManyInts_Many()
+		{
+			var result = CommandLineParser.Parse<OneOrManyIntsType>(new[] { "--Value", "1", "--Value", "2", "--Value", "3" });
+			Assert.Equal(new[] { 1, 2, 3 }, result.Value);
+		}
+
 		class ManyBoolsType
 		{
 			public IEnumerable<bool> Value;

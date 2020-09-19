@@ -5,6 +5,9 @@ namespace CmdParse
 {
 	public sealed class Argument
 	{
+		public static Argument Option(string? description, string name, string? shortName, bool valueIfPassed)
+			=> new Argument(description, AritySettings.Optional(!valueIfPassed), name, shortName, null, new NullaryArgumentParser<bool>(valueIfPassed));
+
 		public Argument(
 			string? description,
 			AritySettings aritySettings,
@@ -34,11 +37,7 @@ namespace CmdParse
 
 		public override string ToString()
 		{
-			var result = $"{Name} : {ResultType.Name}";
-			result += AritySettings.Accept(
-				one: () => "",
-				zeroOrMany: _ => "[]",
-				zeroOrOne: _ => "?");
+			var result = $"{Name} : {ResultType.Name}{AritySettings.PostfixString}";
 			if (AritySettings.GetDefaultValue(out var defaultValue))
 				result += " = " + defaultValue?.ToString();
 			return result;

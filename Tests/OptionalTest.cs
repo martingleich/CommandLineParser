@@ -8,7 +8,7 @@ namespace Tests
 	{
 		class OptionalReferenceType
 		{
-			[CmdOptionDefault(null)]
+			[CmdDefault(null)]
 			public string? Value;
 		}
 		[Fact]
@@ -26,7 +26,7 @@ namespace Tests
 
 		class OptionalError_NonOptionalType
 		{
-			[CmdOptionDefault(null)]
+			[CmdDefault(null)]
 			public int Value;
 		}
 
@@ -38,7 +38,7 @@ namespace Tests
 
 		class OptionalNullableValue_Type
 		{
-			[CmdOptionDefault(null)]
+			[CmdDefault(null)]
 			public int? Value;
 		}
 
@@ -73,7 +73,7 @@ namespace Tests
 		}
 		class OptionalNullableValue_WithDefault_Type
 		{
-			[CmdOptionDefault(456)]
+			[CmdDefault(456)]
 			public int? Value;
 		}
 		[Fact]

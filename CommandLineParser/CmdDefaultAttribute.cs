@@ -3,9 +3,9 @@
 namespace CmdParse
 {
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-	public sealed class CmdOptionDefaultAttribute : Attribute
+	public sealed class CmdDefaultAttribute : Attribute
 	{
-		public CmdOptionDefaultAttribute(object? defaultValue)
+		public CmdDefaultAttribute(object? defaultValue)
 		{
 			DefaultValue = defaultValue;
 		}

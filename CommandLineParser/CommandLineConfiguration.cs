@@ -31,19 +31,29 @@ namespace CmdParse
 
 		private Argument? FindArgument(string arg, ICollection<Argument> readArguments, out int argLength)
 		{
-			if (ArgumentLookup.TryGetValue(arg, out var matchedArg))
+			if (IsParamaterString(arg))
 			{
-				argLength = 1;
-				return matchedArg;
+				if (ArgumentLookup.TryGetValue(arg, out var matchedArg))
+				{
+					argLength = 1;
+					return matchedArg;
+				}
+				else
+				{
+					argLength = 0;
+					return null;
+				}
 			}
 			else
 			{
 				argLength = 0;
-				if (arg.StartsWith("--") || arg.StartsWith("-"))
-					return null;
-				else
-					return OrderedFreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.AritySettings.IsMany);
+				return OrderedFreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.AritySettings.IsMany);
 			}
+		}
+
+		private static bool IsParamaterString(string arg)
+		{
+			return arg.StartsWith("--") || arg.StartsWith("-");
 		}
 
 		public ErrorOr<T> Parse(string[] args)
@@ -91,6 +101,5 @@ namespace CmdParse
 
 			return ErrorOr.FromValue(ResultFactory(values));
 		}
-		
 	}
 }

@@ -16,7 +16,7 @@ namespace CmdParse
 				UnaryArgumentParser.FileInfo,
 				UnaryArgumentParser.DirectoryInfo,
 			}.ToImmutableDictionary(t => t.ResultType);
-		public static readonly Argument HelpArgument = new Argument("Show this help page.", AritySettings.Optional(false), "help", "h", null, new NullaryArgumentParser<bool>(false));
+		public static readonly Argument HelpArgument = Argument.Option("Show this help page.", "help", "h", true);
 
 		private class WrittableMember
 		{
@@ -105,48 +105,30 @@ namespace CmdParse
 		private Argument CreateArgument(WrittableMember memberInfo)
 		{
 			var (name, shortName) = UnpackName(memberInfo);
-			UnpackMonads(memberInfo, out var isNullable, out var elemType, out var arity);
-			var optionalSettings = UnpackDefaults(memberInfo, isNullable, arity, elemType);
+			var elemType = memberInfo.Type;
+			var isNullable = UnpackNullable(ref elemType);
+			var arity = UnpackArity(memberInfo, ref elemType);
+			var aritySettings = UnpackDefaults(memberInfo, isNullable, arity, elemType);
 			var freeIndex = UnpackFrees(memberInfo);
 			var description = UnpackArgumentDescription(memberInfo);
-			return BuildArgument(name, shortName, elemType, optionalSettings, freeIndex, description);
-		}
 
-		private static Argument? TryMapOption(string name, string? shortName, Type elemType, AritySettings aritySettings, string? description)
-		{
-			if (elemType != typeof(bool))
-				return null;
-
-			return aritySettings.Accept(
-				() =>
-				{
-					var parser = new NullaryArgumentParser<bool>(true);
-					var aritySettings1 = AritySettings.Optional(false);
-					return new Argument(description, aritySettings1, name, shortName, null, parser);
-				},
-				_ => null,
-				defaultValue =>
-				{
-					if (defaultValue != null)
-					{
-						var parser = new NullaryArgumentParser<bool>(!(bool)defaultValue);
-						var aritySettings1 = AritySettings.Optional(!parser.Value);
-						return new Argument(description, aritySettings1, name, shortName, null, parser);
-					}
-					else
-					{
-						return null;
-					}
-				});
-		}
-		private static Argument BuildArgument(string name, string? shortName, Type elemType, AritySettings aritySettings, int? freeIndex, string? description)
-		{
-			if (TryMapOption(name, shortName, elemType, aritySettings, description) is Argument optionArgument)
-				return optionArgument;
+			if (TryGetOptionDefaultValue(elemType, aritySettings) is bool optionDefaultValue)
+				return Argument.Option(description, name, shortName, optionDefaultValue);
 			else if (Parsers.TryGetValue(elemType, out var parser))
 				return new Argument(description, aritySettings, name, shortName, freeIndex, parser);
 			else
 				throw new ArgumentException($"Unsupported type {elemType}.");
+		}
+
+		private static bool? TryGetOptionDefaultValue(Type elemType, AritySettings aritySettings )
+		{
+			if (elemType != typeof(bool) || aritySettings.IsMany)
+				return null;
+
+			if (aritySettings.GetDefaultValue(out var defaultValue))
+				return !(bool?)defaultValue;
+			else
+				return true;
 		}
 
 		private static void UnpackProgramDescription(Type t, out string programName, out string? description)
@@ -168,7 +150,7 @@ namespace CmdParse
 
 		private static AritySettings UnpackDefaults(WrittableMember memberInfo, bool isNullable, Arity arity, Type elemType)
 		{
-			var defaultAttribute = memberInfo.GetCustomAttribute<CmdOptionDefaultAttribute>();
+			var defaultAttribute = memberInfo.GetCustomAttribute<CmdDefaultAttribute>();
 			if (defaultAttribute != null)
 			{
 				var defaultValue = defaultAttribute?.DefaultValue;
@@ -186,35 +168,42 @@ namespace CmdParse
 				return AritySettings.Optional(defaultValue);
 			}
 			else
-			{
-				if (arity == Arity.ZeroOrMany)
-					return AritySettings.Many(Helpers.CreateEmptyEnumerable(elemType));
+			{ 
+				if(arity == Arity.OneOrMany)
+					return AritySettings.OneOrMany();
+				else if (arity == Arity.ZeroOrMany)
+					return AritySettings.ZeroOrMany(Helpers.CreateEmptyEnumerable(elemType));
 				else
 					return AritySettings.Expected;
 			}
 		}
 
-		private static void UnpackMonads(WrittableMember memberInfo, out bool isNullable, out Type elemType, out Arity arity)
+		private static Arity UnpackArity(WrittableMember info, ref Type elemType)
 		{
-			elemType = memberInfo.Type;
+			if (elemType.UnpackSingleGeneric(typeof(IEnumerable<>)) is Type baseType)
+			{
+				elemType = baseType;
+				if (info.GetCustomAttribute<CmdAtLeastOneAttribute>() != null)
+					return Arity.OneOrMany;
+				else
+					return Arity.ZeroOrMany;
+			}
+			else
+			{
+				return Arity.One;
+			}
+		}
+
+		private static bool UnpackNullable(ref Type elemType)
+		{
 			if (elemType.UnpackSingleGeneric(typeof(Nullable<>)) is Type baseType)
 			{
 				elemType = baseType;
-				isNullable = true;
+				return true;
 			}
 			else
 			{
-				isNullable = !elemType.IsValueType;
-			}
-
-			if (elemType.UnpackSingleGeneric(typeof(IEnumerable<>)) is Type elemType2)
-			{
-				elemType = elemType2;
-				arity = Arity.ZeroOrMany;
-			}
-			else
-			{
-				arity = Arity.One;
+				return !elemType.IsValueType;
 			}
 		}
 

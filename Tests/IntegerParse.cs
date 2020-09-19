@@ -42,7 +42,7 @@ namespace Tests
 		}
 		public class IntTestType_WithDefault
 		{
-			[CmdOptionDefault(666)]
+			[CmdDefault(666)]
 			public int Value1;
 		}
 		[Fact]

@@ -34,10 +34,10 @@ namespace Tests
 		public class BooleanTestType_WithDefault
 		{
 			public bool Value1;
-			[CmdOptionDefault(true)]
+			[CmdDefault(true)]
 
 			public bool Value2;
-			[CmdOptionDefault(true)]
+			[CmdDefault(true)]
 			public bool Value3;
 			private bool HiddenValue;
 		}

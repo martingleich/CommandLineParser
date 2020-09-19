@@ -32,7 +32,7 @@ namespace Tests
 		public class WrongDefaultType
 
 		{
-			[CmdOptionDefault(true)]
+			[CmdDefault(true)]
 			public int Value1;
 		}
 		[Fact]

@@ -16,7 +16,7 @@ Another line of comments.")]
 			[CmdName("myOption", "o")]
 			public bool myOption;
 
-			[CmdOptionDefault(123.0)]
+			[CmdDefault(123.0)]
 			public double optionalReal;
 		}
 

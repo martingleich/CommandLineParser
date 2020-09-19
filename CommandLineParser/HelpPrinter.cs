@@ -33,10 +33,7 @@ namespace CmdParse
 				sb.Append("--" + arg.Name);
 				if (arg.Parser.HumanReadableSyntaxDescription.Length > 0)
 					sb.Append($" <{arg.Parser.HumanReadableSyntaxDescription}>");
-				sb.Append(arg.AritySettings.Accept(
-					one: () => "",
-					zeroOrMany: _ => "[]",
-					zeroOrOne: _ => "?"));
+				sb.Append(arg.AritySettings.PostfixString);
 			}
 
 			sb.AppendLine();
