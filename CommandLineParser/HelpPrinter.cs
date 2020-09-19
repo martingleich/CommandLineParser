@@ -31,10 +31,12 @@ namespace CmdParse
 					isFirst = false;
 				}
 				sb.Append("--" + arg.Name);
-				if(arg.Parser.HumanReadableSyntaxDescription.Length > 0)
+				if (arg.Parser.HumanReadableSyntaxDescription.Length > 0)
 					sb.Append($" <{arg.Parser.HumanReadableSyntaxDescription}>");
-				if (arg.AritySettings.Arity == Arity.ZeroOrMany)
-					sb.Append("[]");
+				sb.Append(arg.AritySettings.Accept(
+					one: () => "",
+					zeroOrMany: _ => "[]",
+					zeroOrOne: _ => "?"));
 			}
 
 			sb.AppendLine();
@@ -49,7 +51,7 @@ namespace CmdParse
 			string result = "--" + arg.Name;
 			if (arg.ShortName is string shortName)
 				result += " / -" + shortName;
-			if(arg.Parser.HumanReadableSyntaxDescription.Length > 0)
+			if (arg.Parser.HumanReadableSyntaxDescription.Length > 0)
 				result += $" : {arg.Parser.HumanReadableSyntaxDescription}";
 			return result;
 		}
@@ -93,7 +95,7 @@ namespace CmdParse
 						sb.Append(line);
 						maxCollumLength = Math.Max(maxCollumLength, line.Length);
 					}
-					if(i < row.Length - 1)
+					if (i < row.Length - 1)
 						sb.Append(' ', collumnWidths[i] - col.Length);
 					colStart += 2 + collumnWidths[i];
 					++i;

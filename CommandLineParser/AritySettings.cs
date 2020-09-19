@@ -1,4 +1,6 @@
-﻿namespace CmdParse
+﻿using System;
+
+namespace CmdParse
 {
 	public class AritySettings
 	{
@@ -12,10 +14,11 @@
 			Default = @default;
 		}
 
-		public Arity Arity { get; }
+		private Arity Arity { get; }
 		private object? Default { get; }
 
 		public bool IsMandatory => Arity == Arity.One;
+		public bool IsMany => Arity == Arity.ZeroOrMany;
 		public bool GetDefaultValue(out object? value)
 		{
 			if (IsMandatory)
@@ -28,6 +31,20 @@
 				value = Default;
 				return true;
 			}
+		}
+
+		public T Accept<T>(
+			Func<T> one,
+			Func<object?, T> zeroOrMany,
+			Func<object?, T> zeroOrOne)
+		{
+			return Arity switch
+			{
+				Arity.One => one(),
+				Arity.ZeroOrMany => zeroOrMany(Default),
+				Arity.ZeroOrOne => zeroOrOne(Default),
+				_ => throw new InvalidOperationException("Unsupported arity")
+			};
 		}
 	}
 }

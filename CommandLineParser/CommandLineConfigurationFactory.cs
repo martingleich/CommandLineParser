@@ -64,27 +64,26 @@ namespace CmdParse
 			return new CommandLineConfiguration<T>(programName, description, argumentLookup, Factory);
 		}
 
-		private (int FreeIndex, Arity Arity)? TryGetFreeArity(Argument argument)
-			=> argument.FreeIndex is int idx ? (idx, argument.AritySettings.Arity) : default((int, Arity)?);
+		private (int FreeIndex, bool Many)? TryGetFreeArity(Argument argument)
+			=> argument.FreeIndex is int idx ? (idx, argument.AritySettings.IsMany) : default((int, bool)?);
 		private void CheckArguments(IEnumerable<Argument> arguments)
 		{
 			// Check unique ordering of free arguments
 			var usedIndices = new HashSet<int>();
 			int? firstLongArgIndex = null;
 			var lastIndex = int.MinValue;
-			foreach (var freeArg in arguments.Select(TryGetFreeArity).WhereNotNull())
+			foreach (var (FreeIndex, Many) in arguments.Select(TryGetFreeArity).WhereNotNull())
 			{
-				var indexValue = freeArg.FreeIndex;
-				if (!usedIndices.Add(indexValue))
-					throw new ArgumentException($"Free index {indexValue} was used multiple times.");
-				if (freeArg.Arity == Arity.ZeroOrMany)
+				if (!usedIndices.Add(FreeIndex))
+					throw new ArgumentException($"Free index {FreeIndex} was used multiple times.");
+				if (Many)
 				{
 					if (firstLongArgIndex != null)
 						throw new ArgumentException($"Multiple free enumerables.");
 					else
-						firstLongArgIndex = indexValue;
+						firstLongArgIndex = FreeIndex;
 				}
-				lastIndex = Math.Max(lastIndex, indexValue);
+				lastIndex = Math.Max(lastIndex, FreeIndex);
 			}
 			if (firstLongArgIndex != null && lastIndex != firstLongArgIndex.Value)
 				throw new ArgumentException($"The enumerable free argument must be the last free argument.");
@@ -117,25 +116,32 @@ namespace CmdParse
 		{
 			if (elemType != typeof(bool))
 				return null;
-			
-			if (aritySettings.Arity == Arity.One)
-			{
-				var parser = new NullaryArgumentParser<bool>(true);
-				var aritySettings1 = AritySettings.Optional(false);
-				return new Argument(description, aritySettings1, name, shortName, null, parser);
-			}
-			if (aritySettings.Arity == Arity.ZeroOrOne && aritySettings.GetDefaultValue(out var defaultValue) && defaultValue != null)
-			{
-				var parser = new NullaryArgumentParser<bool>(!(bool)defaultValue);
-				var aritySettings1 = AritySettings.Optional(!parser.Value);
-				return new Argument(description, aritySettings1, name, shortName, null, parser);
-			}
 
-			return null;
+			return aritySettings.Accept(
+				() =>
+				{
+					var parser = new NullaryArgumentParser<bool>(true);
+					var aritySettings1 = AritySettings.Optional(false);
+					return new Argument(description, aritySettings1, name, shortName, null, parser);
+				},
+				_ => null,
+				defaultValue =>
+				{
+					if (defaultValue != null)
+					{
+						var parser = new NullaryArgumentParser<bool>(!(bool)defaultValue);
+						var aritySettings1 = AritySettings.Optional(!parser.Value);
+						return new Argument(description, aritySettings1, name, shortName, null, parser);
+					}
+					else
+					{
+						return null;
+					}
+				});
 		}
 		private static Argument BuildArgument(string name, string? shortName, Type elemType, AritySettings aritySettings, int? freeIndex, string? description)
 		{
-			if(TryMapOption(name, shortName, elemType, aritySettings, description) is Argument optionArgument)
+			if (TryMapOption(name, shortName, elemType, aritySettings, description) is Argument optionArgument)
 				return optionArgument;
 			else if (Parsers.TryGetValue(elemType, out var parser))
 				return new Argument(description, aritySettings, name, shortName, freeIndex, parser);

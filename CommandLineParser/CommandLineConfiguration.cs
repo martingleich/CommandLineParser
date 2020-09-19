@@ -42,7 +42,7 @@ namespace CmdParse
 				if (arg.StartsWith("--") || arg.StartsWith("-"))
 					return null;
 				else
-					return OrderedFreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.AritySettings.Arity == Arity.ZeroOrMany);
+					return OrderedFreeArguments.FirstOrDefault(freeArg => !readArguments.Contains(freeArg) || freeArg.AritySettings.IsMany);
 			}
 		}
 
@@ -60,7 +60,7 @@ namespace CmdParse
 					if (parseResult.MaybeError is string error)
 						return error;
 					var (count, value) = parseResult.Value;
-					if (matchedArg.AritySettings.Arity == Arity.ZeroOrMany)
+					if (matchedArg.AritySettings.IsMany)
 					{
 						if (!values.TryGetValue(matchedArg, out object? list) || list == null)
 						{

@@ -35,8 +35,10 @@ namespace CmdParse
 		public override string ToString()
 		{
 			var result = $"{Name} : {ResultType.Name}";
-			if(AritySettings.Arity == Arity.ZeroOrMany)
-				result += "[]";
+			result += AritySettings.Accept(
+				one: () => "",
+				zeroOrMany: _ => "[]",
+				zeroOrOne: _ => "?");
 			if (AritySettings.GetDefaultValue(out var defaultValue))
 				result += " = " + defaultValue?.ToString();
 			return result;
