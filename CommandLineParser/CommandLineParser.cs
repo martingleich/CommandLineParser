@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Immutable;
 
 namespace CmdParse
 {
@@ -7,7 +8,7 @@ namespace CmdParse
 		public static T Parse<T>(string[] args) where T : new()
 			=> ParseWithError<T>(args).Accept(
 				okay: r => r,
-				error: error => throw new InvalidOperationException(error));
+				error: errors => throw new InvalidOperationException(string.Join(Environment.NewLine, errors)));
 
 		public static ErrorOr<T> ParseWithError<T>(string[] args) where T : new()
 		{
@@ -24,10 +25,10 @@ namespace CmdParse
 			return result.Accept(main, err => OnError(config, err));
 		}
 
-		public static int OnError<T>(CommandLineConfiguration<T> config, string error)
+		public static int OnError<T>(CommandLineConfiguration<T> config, ImmutableArray<Error> errors)
 		{
 			var help = new HelpPrinter().PrintHelp(config);
-			if (error == "")
+			if (errors.IsEmpty)
 			{
 				Console.WriteLine(help);
 				return 0;
@@ -36,7 +37,8 @@ namespace CmdParse
 			{
 				var old = Console.ForegroundColor;
 				Console.ForegroundColor = ConsoleColor.Red;
-				Console.WriteLine(error);
+				foreach(var error in errors)
+					Console.WriteLine(error);
 				Console.ForegroundColor = old;
 
 				Console.WriteLine();

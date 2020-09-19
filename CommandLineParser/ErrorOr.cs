@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Immutable;
 
 namespace CmdParse
 {
@@ -13,28 +14,30 @@ namespace CmdParse
 				_value = value;
 			}
 
-			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error) => okay(_value);
+			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<ImmutableArray<Error>, TResult> error) => okay(_value);
 		}
 		private sealed class ErrorT : ErrorOr<T>
 		{
-			public string _error;
+			public ImmutableArray<Error> _errors;
 
-			public ErrorT(string error)
+			public ErrorT(ImmutableArray<Error> error)
 			{
-				_error = error;
+				_errors = error;
 			}
 
-			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error) => error(_error);
+			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<ImmutableArray<Error>, TResult> error) => error(_errors);
 		}
 
-		public abstract TResult Accept<TResult>(Func<T, TResult> okay, Func<string, TResult> error);
+		public abstract TResult Accept<TResult>(Func<T, TResult> okay, Func<ImmutableArray<Error>, TResult> error);
 
 		public bool IsOkay => Accept(_ => true, _ => false);
 
-		public static implicit operator ErrorOr<T>(string error) => new ErrorT(error);
+		public static implicit operator ErrorOr<T>(string error) => new Error(ErrorId.GenericError, error);
+		public static implicit operator ErrorOr<T>(Error error) => ImmutableArray.Create(error);
+		public static implicit operator ErrorOr<T>(ImmutableArray<Error> errors) => new ErrorT(errors);
 		public static ErrorOr<T> FromValue(T value) => new ValueT(value);
 
-		public string? MaybeError => Accept<string?>(_ => null, e => e);
+		public string? MaybeError => Accept<string?>(_ => null, e => string.Join(Environment.NewLine, e));
 		public T Value => Accept(x => x, e => throw new InvalidOperationException());
 		public ErrorOr<TResult> Apply<TResult>(Func<T, TResult> func) =>
 			Accept(x => ErrorOr.FromValue(func(x)), e => e);
