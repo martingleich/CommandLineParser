@@ -88,6 +88,7 @@ namespace CmdParse
 					return new Error(ErrorId.UnknownOption, arg);
 				}
 			}
+			var errorsList = new List<Error>();
 			foreach (var arg in Arguments)
 			{
 				if (!values.ContainsKey(arg))
@@ -95,9 +96,11 @@ namespace CmdParse
 					if (arg.AritySettings.GetDefaultValue(out var defaultValue))
 						values.Add(arg, defaultValue);
 					else
-						return new Error(ErrorId.MissingMandatoryArgument, arg.Name);
+						errorsList.Add(new Error(ErrorId.MissingMandatoryArgument, arg.Name));
 				}
 			}
+			if (errorsList.Any())
+				return errorsList.ToImmutableArray();
 
 			return ErrorOr.FromValue(ResultFactory(values));
 		}
