@@ -53,6 +53,8 @@ namespace CmdParse
 				result += " / -" + shortName;
 			if (arg.Parser.HumanReadableSyntaxDescription.Length > 0)
 				result += $" : {arg.Parser.HumanReadableSyntaxDescription}";
+			if (!arg.AritySettings.IsMany && !(arg.Parser is NullaryArgumentParser<bool>) && arg.AritySettings.GetDefaultValue(out var defaultValue))
+				result += " = " + (defaultValue?.ToString() ?? "<null>");
 			return result;
 		}
 		private string DescriptionCollumn(Argument arg)

@@ -15,6 +15,9 @@ Another line of comments.")]
 			[CmdArgumentDescription("A option.")]
 			[CmdName("myOption", "o")]
 			public bool myOption;
+
+			[CmdOptionDefault(123.0)]
+			public double optionalReal;
 		}
 
 		[Fact]
@@ -27,10 +30,12 @@ With multiline.
 
 MyProgram --myArgument <Int32>
 
-  --help / -h           Show this help page.
-  --myArgument : Int32  A argument.
-                        Another line of comments.
-  --myOption / -o       A option.", help);
+  --help / -h                    Show this help page.
+  --myArgument : Int32           A argument.
+                                 Another line of comments.
+  --myOption / -o                A option.
+  --optionalReal : Double = 123  "
+, help);
 		}
 	}
 }
