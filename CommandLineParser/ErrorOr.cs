@@ -32,7 +32,6 @@ namespace CmdParse
 
 		public bool IsOkay => Accept(_ => true, _ => false);
 
-		//public static implicit operator ErrorOr<T>(string error) => new Error(ErrorId.GenericError, error);
 		public static implicit operator ErrorOr<T>(Error error) => ImmutableArray.Create(error);
 		public static implicit operator ErrorOr<T>(ImmutableArray<Error> errors) => new ErrorT(errors);
 		public static ErrorOr<T> FromValue(T value) => new ValueT(value);

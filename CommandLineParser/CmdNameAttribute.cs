@@ -3,7 +3,7 @@
 namespace CmdParse
 {
 
-	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Parameter)]
 	public sealed class CmdNameAttribute : Attribute
 	{
 		public CmdNameAttribute(string name)

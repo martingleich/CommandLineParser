@@ -18,7 +18,15 @@ namespace CmdParse
 			}.ToImmutableDictionary(t => t.ResultType);
 		public static readonly Argument HelpArgument = Argument.Option("Show this help page.", "help", "h", true);
 
-		private class WrittableMember
+		private interface IWrittableMember
+		{
+			string Name { get; }
+			Type Type { get; }
+
+			T? GetCustomAttribute<T>() where T : Attribute;
+		}
+
+		private class WrittableMember : IWrittableMember
 		{
 			public MemberInfo Member { get; }
 			public Action<object?, object?> WriteFunc { get; }
@@ -35,6 +43,29 @@ namespace CmdParse
 			}
 		}
 
+		private class ConstructorArgument : IWrittableMember
+		{
+			public ConstructorArgument(ParameterInfo paramInfo)
+			{
+				ParamInfo = paramInfo;
+			}
+
+			public ParameterInfo ParamInfo { get; }
+			public string Name => ParamInfo.Name ?? "";
+			public Type Type => ParamInfo.ParameterType;
+			public T? GetCustomAttribute<T>() where T : Attribute => ParamInfo.GetCustomAttribute<T>();
+		}
+
+		private IEnumerable<ConstructorArgument> GetConstructorArgs(Type t)
+		{
+			var constructors = t.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+			if (constructors.Length == 1)
+			{
+				var parameters = constructors.Single().GetParameters();
+				foreach (var param in parameters)
+					yield return new ConstructorArgument(param);
+			}
+		}
 		private IEnumerable<WrittableMember> GetWrittableMembers(Type t)
 		{
 			foreach (var field in t.GetFields(BindingFlags.Public | BindingFlags.Instance))
@@ -45,17 +76,20 @@ namespace CmdParse
 					yield return new WrittableMember(prop, prop.SetValue, prop.PropertyType);
 		}
 
-		public CommandLineConfiguration<T> Create<T>() where T : new()
+		public CommandLineConfiguration<T> Create<T>() where T : notnull
 		{
-			var settableMembers = GetWrittableMembers(typeof(T));
-			var argumentMap = settableMembers.ToImmutableDictionary(f => f, CreateArgument);
-			var arguments = argumentMap.Values.Append(HelpArgument);
+			var constructorArgs = GetConstructorArgs(typeof(T));
+			var writtableMembers = GetWrittableMembers(typeof(T));
+			var constructorArgsMap = constructorArgs.ToImmutableDictionary(f => f, CreateArgument);
+			var writtableMembersMap = writtableMembers.ToImmutableDictionary(f => f, CreateArgument);
+			var arguments = constructorArgsMap.Values.Concat(writtableMembersMap.Values).Append(HelpArgument).ToImmutableArray();
 			CheckArguments(arguments);
 
 			T Factory(IDictionary<Argument, object?> values)
 			{
-				var result = new T();
-				foreach (var arg in argumentMap)
+				var constructorArgs = constructorArgsMap.Select(arg => values[arg.Value]).ToArray();
+				var result = (T)Activator.CreateInstance(typeof(T), constructorArgs).ThrowIfNull();
+				foreach (var arg in writtableMembersMap)
 					arg.Key.Write(result, values[arg.Value]);
 				return result;
 			}
@@ -102,7 +136,7 @@ namespace CmdParse
 			return argumentLookup.ToImmutableDictionary();
 		}
 
-		private Argument CreateArgument(WrittableMember memberInfo)
+		private Argument CreateArgument(IWrittableMember memberInfo)
 		{
 			var (name, shortName) = UnpackName(memberInfo);
 			var elemType = memberInfo.Type;
@@ -137,18 +171,18 @@ namespace CmdParse
 			programName = attribute?.Name ?? System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 			description = attribute?.Description;
 		}
-		private static string? UnpackArgumentDescription(WrittableMember m)
+		private static string? UnpackArgumentDescription(IWrittableMember m)
 		{
 			var attribute = m.GetCustomAttribute<CmdArgumentDescriptionAttribute>();
 			return attribute?.Description;
 		}
 
-		private static int? UnpackFrees(WrittableMember memberInfo)
+		private static int? UnpackFrees(IWrittableMember memberInfo)
 		{
 			return memberInfo.GetCustomAttribute<CmdFreeAttribute>()?.Index;
 		}
 
-		private static AritySettings UnpackDefaults(WrittableMember memberInfo, bool isNullable, Arity arity, Type elemType)
+		private static AritySettings UnpackDefaults(IWrittableMember memberInfo, bool isNullable, Arity arity, Type elemType)
 		{
 			var defaultAttribute = memberInfo.GetCustomAttribute<CmdDefaultAttribute>();
 			if (defaultAttribute != null)
@@ -178,7 +212,7 @@ namespace CmdParse
 			}
 		}
 
-		private static Arity UnpackArity(WrittableMember info, ref Type elemType)
+		private static Arity UnpackArity(IWrittableMember info, ref Type elemType)
 		{
 			if (elemType.UnpackSingleGeneric(typeof(IEnumerable<>)) is Type baseType)
 			{
@@ -207,7 +241,7 @@ namespace CmdParse
 			}
 		}
 
-		private static (string name, string? shortName) UnpackName(WrittableMember memberInfo)
+		private static (string name, string? shortName) UnpackName(IWrittableMember memberInfo)
 		{
 			var nameAttribute = memberInfo.GetCustomAttribute<CmdNameAttribute>();
 			return (

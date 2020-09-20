@@ -2,7 +2,7 @@
 
 namespace CmdParse
 {
-	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Parameter)]
 	public class CmdArgumentDescriptionAttribute : Attribute
 	{
 		public CmdArgumentDescriptionAttribute(string description)
@@ -10,6 +10,6 @@ namespace CmdParse
 			Description = description;
 		}
 
-		public string Description { get; set; }
+		public string Description { get; }
 	}
 }

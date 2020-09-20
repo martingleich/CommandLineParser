@@ -5,19 +5,19 @@ namespace CmdParse
 {
 	public static class CommandLineParser
 	{
-		public static T Parse<T>(string[] args) where T : new()
+		public static T Parse<T>(string[] args) where T : notnull
 			=> ParseWithError<T>(args).Accept(
 				okay: r => r,
 				error: errors => throw new InvalidOperationException(string.Join(Environment.NewLine, errors)));
 
-		public static ErrorOr<T> ParseWithError<T>(string[] args) where T : new()
+		public static ErrorOr<T> ParseWithError<T>(string[] args) where T : notnull
 		{
 			var factory = new CommandLineConfigurationFactory();
 			var config = factory.Create<T>();
 			return config.Parse(args);
 		}
 
-		public static int Call<T>(string[] args, Func<T, int> main) where T : new()
+		public static int Call<T>(string[] args, Func<T, int> main) where T : notnull
 		{
 			var factory = new CommandLineConfigurationFactory();
 			var config = factory.Create<T>();

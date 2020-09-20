@@ -2,7 +2,7 @@
 
 namespace CmdParse
 {
-	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Parameter)]
 	public sealed class CmdDefaultAttribute : Attribute
 	{
 		public CmdDefaultAttribute(object? defaultValue)
