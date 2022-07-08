@@ -6,9 +6,9 @@ using System.Text;
 
 namespace CmdParse
 {
-	public class HelpPrinter
+	internal class HelpPrinter
 	{
-		public string PrintHelp<TResult>(CommandLineConfiguration<TResult> config)
+		public string PrintHelp<TResult>(CommandLineParser<TResult> config)
 		{
 			var sb = new StringBuilder();
 			if (config.Description is string description)
@@ -56,8 +56,7 @@ namespace CmdParse
 		}
 		private string DescriptionCollumn(Argument arg)
 			=> arg.Description ?? "";
-
-		private void PrintTable<T1>(StringBuilder sb, IEnumerable<T1> values, params Func<T1, string>[] collumns)
+		private void PrintTable<T>(StringBuilder sb, IEnumerable<T> values, params Func<T, string>[] collumns)
 		{
 			var rows = values.Select(v => collumns.Select(f => f(v)).ToImmutableArray());
 			var collumnWidths = rows.Select(r => r.Select(r => r.Length)).Aggregate((a, b) => a.Zip(b, Math.Max)).ToImmutableArray();

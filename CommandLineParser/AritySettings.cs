@@ -2,7 +2,7 @@
 
 namespace CmdParse
 {
-	public class AritySettings
+    internal class AritySettings
 	{
 		public static AritySettings Expected => new AritySettings(Arity.One, default);
 		public static AritySettings Optional(object? defaultValue) => new AritySettings(Arity.ZeroOrOne, defaultValue);
@@ -51,7 +51,6 @@ namespace CmdParse
 				_ => throw new InvalidOperationException("Unsupported arity")
 			};
 		}
-
 
 		public string PostfixString =>
 			Arity switch

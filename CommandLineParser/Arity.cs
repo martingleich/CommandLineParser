@@ -1,6 +1,6 @@
 ﻿namespace CmdParse
 {
-	public enum Arity
+    internal enum Arity
 	{
 		One,
 		ZeroOrOne,

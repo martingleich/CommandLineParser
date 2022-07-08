@@ -1,12 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace CmdParse
 {
 	public interface IArgumentParser
 	{
-		ErrorOr<(int Count, object? Value)> Parse(Argument arg, IEnumerable<string> parameters);
+		ErrorOr<(ParameterStream Remainder, object? Value)> Parse(ParameterStream parameters);
 		Type ResultType { get; }
 		string HumanReadableSyntaxDescription { get; }
+	}
+
+	public interface IArgumentParser<T> : IArgumentParser
+	{
 	}
 }

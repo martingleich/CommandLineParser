@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Tests
 {
-	public class HelpTests
+    public class HelpTests
 	{
 		[CmdProgramDescription("MyProgram", Description = @"A cool program todo things.
 With multiline.")]
@@ -23,7 +23,7 @@ Another line of comments.")]
 		[Fact]
 		public void ShowBasicHelp()
 		{
-			var config = new CommandLineConfigurationFactory().Create<BasicType>();
+			var config = new CommandLineParserFactory().CreateParser<BasicType>();
 			var help = new HelpPrinter().PrintHelp(config);
 			Assert.Equal(@"A cool program todo things.
 With multiline.

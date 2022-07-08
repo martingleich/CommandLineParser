@@ -5,27 +5,27 @@ namespace CmdParse
 {
 	public static class CommandLineParser
 	{
-		public static T Parse<T>(string[] args) where T : notnull
+		public static T Parse<T>(params string[] args) where T : notnull
 			=> ParseWithError<T>(args).Accept(
 				okay: r => r,
 				error: errors => throw new InvalidOperationException(string.Join(Environment.NewLine, errors)));
 
-		public static ErrorOr<T> ParseWithError<T>(string[] args) where T : notnull
+		public static ErrorOr<T> ParseWithError<T>(params string[] args) where T : notnull
 		{
-			var factory = new CommandLineConfigurationFactory();
-			var config = factory.Create<T>();
+			var factory = new CommandLineParserFactory();
+			var config = factory.CreateParser<T>();
 			return config.Parse(args);
 		}
 
 		public static int Call<T>(string[] args, Func<T, int> main) where T : notnull
 		{
-			var factory = new CommandLineConfigurationFactory();
-			var config = factory.Create<T>();
+			var factory = new CommandLineParserFactory();
+			var config = factory.CreateParser<T>();
 			var result = config.Parse(args);
 			return result.Accept(main, err => OnError(config, err));
 		}
 
-		public static int OnError<T>(CommandLineConfiguration<T> config, ImmutableArray<Error> errors)
+		public static int OnError<T>(CommandLineParser<T> config, ImmutableArray<Error> errors)
 		{
 			var help = new HelpPrinter().PrintHelp(config);
 			if (errors.IsEmpty)
@@ -46,5 +46,7 @@ namespace CmdParse
 				return 1;
 			}
 		}
+
+		public static CommandLineParserFactory CreateFactory() => new CommandLineParserFactory();	
 	}
 }

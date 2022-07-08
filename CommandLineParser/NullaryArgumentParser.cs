@@ -1,22 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace CmdParse
 {
-	public sealed class NullaryArgumentParser<T> : IArgumentParser
+	/// <summary>
+	/// An argument parser that consumes no parameters from the stream.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	internal sealed class NullaryArgumentParser<T> : IArgumentParser
 	{
-		public NullaryArgumentParser(T value)
+		public NullaryArgumentParser(T value, string syntaxDescription)
 		{
 			Value = value;
+			HumanReadableSyntaxDescription = syntaxDescription;
 		}
 
 		public T Value { get; }
-
 		public Type ResultType => typeof(T);
+		public string HumanReadableSyntaxDescription { get; }
 
-		public string HumanReadableSyntaxDescription => "";
-
-		public ErrorOr<(int Count, object? Value)> Parse(Argument _, IEnumerable<string> parameters)
-			=> ErrorOr.FromValue((0, (object?)Value));
+		public ErrorOr<(ParameterStream Remainder, object? Value)> Parse(ParameterStream parameters)
+            => ErrorOr.FromValue((parameters, (object?)Value));
 	}
 }

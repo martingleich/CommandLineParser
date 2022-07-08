@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CmdParse
 {
@@ -15,6 +16,11 @@ namespace CmdParse
 			}
 
 			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<ImmutableArray<Error>, TResult> error) => okay(_value);
+            public override bool TryGetValue([MaybeNullWhen(false)] out T value)
+            {
+				value = _value;
+				return true;
+            }
 		}
 		private sealed class ErrorT : ErrorOr<T>
 		{
@@ -26,11 +32,18 @@ namespace CmdParse
 			}
 
 			public override TResult Accept<TResult>(Func<T, TResult> okay, Func<ImmutableArray<Error>, TResult> error) => error(_errors);
-		}
+
+            public override bool TryGetValue([MaybeNullWhen(false)] out T value)
+            {
+				value = default;
+				return false;
+            }
+        }
 
 		public abstract TResult Accept<TResult>(Func<T, TResult> okay, Func<ImmutableArray<Error>, TResult> error);
 
 		public bool IsOkay => Accept(_ => true, _ => false);
+		public abstract bool TryGetValue([MaybeNullWhen(false)] out T value);
 
 		public static implicit operator ErrorOr<T>(Error error) => ImmutableArray.Create(error);
 		public static implicit operator ErrorOr<T>(ImmutableArray<Error> errors) => new ErrorT(errors);

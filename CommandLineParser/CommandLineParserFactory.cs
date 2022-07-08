@@ -6,19 +6,27 @@ using System.Reflection;
 
 namespace CmdParse
 {
-	public sealed class CommandLineConfigurationFactory
+	public sealed class CommandLineParserFactory
 	{
-		private static readonly ImmutableDictionary<Type, IArgumentParser> Parsers = new IArgumentParser[] {
+		private static readonly ImmutableDictionary<Type, IArgumentParser> _parsers = new IArgumentParser[] {
 				UnaryArgumentParser.Bool,
 				UnaryArgumentParser.Int,
 				UnaryArgumentParser.Double,
 				UnaryArgumentParser.String,
 				UnaryArgumentParser.FileInfo,
 				UnaryArgumentParser.DirectoryInfo,
+				UnaryArgumentParser.IPEndPoint
 			}.ToImmutableDictionary(t => t.ResultType);
-		public static readonly Argument HelpArgument = Argument.Option("Show this help page.", "help", "h", true);
+		public static IArgumentParser? TryGetBuiltInParser(Type type)
+		{
+			if (_parsers.TryGetValue(type, out var parser))
+				return parser;
+			else
+				return null;
+		}
+		internal static readonly Argument HelpArgument = Argument.Option("Show this help page.", "help", "h", true);
 
-		private interface IWrittableMember
+		private interface IElement
 		{
 			string Name { get; }
 			Type Type { get; }
@@ -26,7 +34,7 @@ namespace CmdParse
 			T? GetCustomAttribute<T>() where T : Attribute;
 		}
 
-		private class WrittableMember : IWrittableMember
+		private class WrittableMember : IElement
 		{
 			public MemberInfo Member { get; }
 			public Action<object?, object?> WriteFunc { get; }
@@ -43,7 +51,7 @@ namespace CmdParse
 			}
 		}
 
-		private class ConstructorArgument : IWrittableMember
+		private class ConstructorArgument : IElement
 		{
 			public ConstructorArgument(ParameterInfo paramInfo)
 			{
@@ -61,41 +69,52 @@ namespace CmdParse
 			var constructors = t.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
 			if (constructors.Length == 1)
 			{
-				var parameters = constructors.Single().GetParameters();
+				var parameters = constructors[0].GetParameters();
 				foreach (var param in parameters)
 					yield return new ConstructorArgument(param);
 			}
 		}
-		private IEnumerable<WrittableMember> GetWrittableMembers(Type t)
+		private IEnumerable<WrittableMember> GetWrittableMembers(Type t, HashSet<string> constructorArgs)
 		{
 			foreach (var field in t.GetFields(BindingFlags.Public | BindingFlags.Instance))
-				if (!field.IsInitOnly)
+				if (!field.IsInitOnly && !constructorArgs.Contains(field.Name))
 					yield return new WrittableMember(field, field.SetValue, field.FieldType);
 			foreach (var prop in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-				if (prop.CanWrite)
+				if (prop.CanWrite && !constructorArgs.Contains(prop.Name))
 					yield return new WrittableMember(prop, prop.SetValue, prop.PropertyType);
 		}
 
-		public CommandLineConfiguration<T> Create<T>() where T : notnull
+		private Func<Type, IArgumentParser?> ParserProvider = TryGetBuiltInParser;
+		public CommandLineParserFactory()
 		{
-			var constructorArgs = GetConstructorArgs(typeof(T));
-			var writtableMembers = GetWrittableMembers(typeof(T));
-			var constructorArgsMap = constructorArgs.ToImmutableDictionary(f => f, CreateArgument);
-			var writtableMembersMap = writtableMembers.ToImmutableDictionary(f => f, CreateArgument);
+		}
+
+		public CommandLineParserFactory AddParser<T>(IArgumentParser<T> parser) => AddParser<T>((IArgumentParser)parser);
+		public CommandLineParserFactory AddParser<T>(IArgumentParser parser)
+		{
+			ParserProvider = t => t == typeof(T) ? parser : ParserProvider(t);
+			return this;
+		}
+
+		public CommandLineParser<T> CreateParser<T>() where T : notnull
+		{
+			var type = typeof(T);
+			var constructorArgsMap = GetConstructorArgs(type).ToImmutableDictionary(f => f, CreateArgument);
+			var writtableMembersMap = GetWrittableMembers(type, constructorArgsMap.Keys.Select(key => key.Name).ToHashSet()).ToImmutableDictionary(f => f, CreateArgument);
 			var arguments = constructorArgsMap.Values.Concat(writtableMembersMap.Values).Append(HelpArgument).ToImmutableArray();
 			CheckArguments(arguments);
 
 			T Factory(IDictionary<Argument, object?> values)
 			{
-				var constructorArgs = constructorArgsMap.Select(arg => values[arg.Value]).ToArray();
-				var result = (T)Activator.CreateInstance(typeof(T), constructorArgs).ThrowIfNull();
+				var constructorArgs = constructorArgsMap.OrderBy(arg => arg.Key.ParamInfo.Position).Select(arg => values[arg.Value]).ToArray();
+				var result = (T)Activator.CreateInstance(type, constructorArgs).ThrowIfNull();
 				foreach (var arg in writtableMembersMap)
 					arg.Key.Write(result, values[arg.Value]);
 				return result;
 			}
 			var argumentLookup = CreateLookupTable(arguments);
-			UnpackProgramDescription(typeof(T), out var programName, out var description);
-			return new CommandLineConfiguration<T>(programName, description, argumentLookup, Factory);
+			UnpackProgramDescription(type, out var programName, out var description);
+			return new CommandLineParser<T>(programName, description, argumentLookup, Factory);
 		}
 
 		private (int FreeIndex, bool Many)? TryGetFreeArity(Argument argument)
@@ -136,7 +155,7 @@ namespace CmdParse
 			return argumentLookup.ToImmutableDictionary();
 		}
 
-		private Argument CreateArgument(IWrittableMember memberInfo)
+		private Argument CreateArgument(IElement memberInfo)
 		{
 			var (name, shortName) = UnpackName(memberInfo);
 			var elemType = memberInfo.Type;
@@ -148,7 +167,7 @@ namespace CmdParse
 
 			if (TryGetOptionDefaultValue(elemType, aritySettings) is bool optionDefaultValue)
 				return Argument.Option(description, name, shortName, optionDefaultValue);
-			else if (Parsers.TryGetValue(elemType, out var parser))
+			else if (ParserProvider(elemType) is IArgumentParser parser)
 				return new Argument(description, aritySettings, name, shortName, freeIndex, parser);
 			else
 				throw new ArgumentException($"Unsupported type {elemType}.");
@@ -171,18 +190,18 @@ namespace CmdParse
 			programName = attribute?.Name ?? System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 			description = attribute?.Description;
 		}
-		private static string? UnpackArgumentDescription(IWrittableMember m)
+		private static string? UnpackArgumentDescription(IElement m)
 		{
 			var attribute = m.GetCustomAttribute<CmdArgumentDescriptionAttribute>();
 			return attribute?.Description;
 		}
 
-		private static int? UnpackFrees(IWrittableMember memberInfo)
+		private static int? UnpackFrees(IElement memberInfo)
 		{
 			return memberInfo.GetCustomAttribute<CmdFreeAttribute>()?.Index;
 		}
 
-		private static AritySettings UnpackDefaults(IWrittableMember memberInfo, bool isNullable, Arity arity, Type elemType)
+		private AritySettings UnpackDefaults(IElement memberInfo, bool isNullable, Arity arity, Type elemType)
 		{
 			var defaultAttribute = memberInfo.GetCustomAttribute<CmdDefaultAttribute>();
 			if (defaultAttribute != null)
@@ -196,7 +215,20 @@ namespace CmdParse
 				else
 				{
 					if (!elemType.IsInstanceOfType(defaultValue))
-						throw new ArgumentException($"Wrong default value '{defaultValue}' for type '{elemType}'");
+					{
+						string[]? stringDefault = defaultValue as string[];
+						if(stringDefault == null && defaultValue is string stringDefaultValue)
+							stringDefault = new[] { stringDefaultValue };
+						if(stringDefault == null)
+                            throw new ArgumentException($"Wrong default value ({defaultValue.GetType()})'{defaultValue}' for type '{elemType}'");
+						var parser = ParserProvider(elemType);
+						if(parser == null)
+                            throw new ArgumentException($"Unsupported type {elemType}.");
+						var maybeParseResult = parser.Parse(ParameterStream.Create(stringDefault));
+						if(!maybeParseResult.TryGetValue(out var parseResult))
+                            throw new ArgumentException($"Cannot parse default value [{string.Join(", ", stringDefault)}] as '{elemType}'");
+						defaultValue = parseResult.Value;
+					}
 				}
 
 				return AritySettings.Optional(defaultValue);
@@ -212,7 +244,7 @@ namespace CmdParse
 			}
 		}
 
-		private static Arity UnpackArity(IWrittableMember info, ref Type elemType)
+		private static Arity UnpackArity(IElement info, ref Type elemType)
 		{
 			if (elemType.UnpackSingleGeneric(typeof(IEnumerable<>)) is Type baseType)
 			{
@@ -241,7 +273,7 @@ namespace CmdParse
 			}
 		}
 
-		private static (string name, string? shortName) UnpackName(IWrittableMember memberInfo)
+		private static (string name, string? shortName) UnpackName(IElement memberInfo)
 		{
 			var nameAttribute = memberInfo.GetCustomAttribute<CmdNameAttribute>();
 			return (

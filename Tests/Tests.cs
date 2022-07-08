@@ -25,7 +25,7 @@ namespace Tests
 		[Fact]
 		public void ReadonlyTest()
 		{
-			var config = new CommandLineConfigurationFactory().Create<ReadonlyTestType>();
+			var config = new CommandLineParserFactory().CreateParser<ReadonlyTestType>();
 			Assert.DoesNotContain("Value", config.Arguments.Select(a => a.Name));
 		}
 
@@ -58,9 +58,32 @@ namespace Tests
 		[Fact]
 		public void Property()
 		{
-			var config = new CommandLineConfigurationFactory().Create<PropertyType>();
+			var config = new CommandLineParserFactory().CreateParser<PropertyType>();
 			Assert.Contains("Value", config.Arguments.Select(a => a.Name));
 			Assert.DoesNotContain("IgnoredValue", config.Arguments.Select(a => a.Name));
+		}
+		class ConstructorType
+		{
+			public ConstructorType(int arg, int arg2)
+			{
+				SynthValue = arg * arg2;
+			}
+			public bool arg { get; set; } // The constructor arg will overrride this
+			public int MyPropertyValue { get; set; }
+			public int SynthValue { get; }
+		}
+		[Fact]
+		public void Constructor()
+		{
+			var config = new CommandLineParserFactory().CreateParser<ConstructorType>();
+			Assert.Contains("arg", config.Arguments.Select(a => a.Name));
+			Assert.Contains("arg2", config.Arguments.Select(a => a.Name));
+			Assert.Contains("MyPropertyValue", config.Arguments.Select(a => a.Name));
+			Assert.DoesNotContain("SynthValue", config.Arguments.Select(a => a.Name));
+			var value = config.Parse("--arg2", "8", "--arg", "4", "--MyPropertyValue", "7").Value;
+			Assert.Equal(32, value.SynthValue);
+			Assert.Equal(7, value.MyPropertyValue);
+			Assert.Equal(default(bool), value.arg);
 		}
 	}
 }
